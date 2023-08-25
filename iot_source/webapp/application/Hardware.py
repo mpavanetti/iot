@@ -35,8 +35,8 @@ class Hardware:
             ["%s==%s" % (i.key, i.version) for i in installed_packages]
         )
         return installed_packages_list
-    
-    def get_size(self,bytes, suffix="B"):
+
+    def get_size(self, bytes, suffix="B"):
         """
         Scale bytes to its proper format
         e.g:
@@ -53,43 +53,42 @@ class Hardware:
         boot_time_timestamp = psutil.boot_time()
         bt = datetime.fromtimestamp(boot_time_timestamp)
         return f"{bt.year}/{bt.month}/{bt.day} {bt.hour}:{bt.minute}:{bt.second}"
-    
+
     def get_disk_partitions(self) -> str:
         partitions = psutil.disk_partitions()
         result = ""
         for partition in partitions:
-            result += (f"=== Device: {partition.device} ===\n")
-            result += (f"  Mountpoint: {partition.mountpoint}\n")
-            result += (f"  File system type: {partition.fstype}\n")
+            result += f"=== Device: {partition.device} ===\n"
+            result += f"  Mountpoint: {partition.mountpoint}\n"
+            result += f"  File system type: {partition.fstype}\n"
             try:
                 partition_usage = psutil.disk_usage(partition.mountpoint)
             except PermissionError:
                 # this can be catched due to the disk that
                 # isn't ready
                 continue
-            result += (f"  Total Size: {self.get_size(partition_usage.total)}\n")
-            result += (f"  Used: {self.get_size(partition_usage.used)}\n")
-            result += (f"  Free: {self.get_size(partition_usage.free)}\n")
-            result += (f"  Percentage: {partition_usage.percent}%")
-        return result
-    
-    def get_network(self) -> str:
-        if_addrs = psutil.net_if_addrs()
-        result =""
-        for interface_name, interface_addresses in if_addrs.items():
-            for address in interface_addresses:
-                result+= (f"=== Interface: {interface_name} ===\n")
-                if str(address.family) == 'AddressFamily.AF_INET':
-                    result+= (f"  IP Address: {address.address}\n")
-                    result+= (f"  Netmask: {address.netmask}\n")
-                    result+= (f"  Broadcast IP: {address.broadcast}\n")
-                elif str(address.family) == 'AddressFamily.AF_PACKET':
-                    result+= (f"  MAC Address: {address.address}\n")
-                    result+= (f"  Netmask: {address.netmask}\n")
-                    result+= (f"  Broadcast MAC: {address.broadcast}\n")
+            result += f"  Total Size: {self.get_size(partition_usage.total)}\n"
+            result += f"  Used: {self.get_size(partition_usage.used)}\n"
+            result += f"  Free: {self.get_size(partition_usage.free)}\n"
+            result += f"  Percentage: {partition_usage.percent}%"
         return result
 
-       
+    def get_network(self) -> str:
+        if_addrs = psutil.net_if_addrs()
+        result = ""
+        for interface_name, interface_addresses in if_addrs.items():
+            for address in interface_addresses:
+                result += f"=== Interface: {interface_name} ===\n"
+                if str(address.family) == "AddressFamily.AF_INET":
+                    result += f"  IP Address: {address.address}\n"
+                    result += f"  Netmask: {address.netmask}\n"
+                    result += f"  Broadcast IP: {address.broadcast}\n"
+                elif str(address.family) == "AddressFamily.AF_PACKET":
+                    result += f"  MAC Address: {address.address}\n"
+                    result += f"  Netmask: {address.netmask}\n"
+                    result += f"  Broadcast MAC: {address.broadcast}\n"
+        return result
+
     def get_all_network(self) -> dict:
         net_io = psutil.net_io_counters()
         return {
@@ -98,18 +97,16 @@ class Hardware:
             "hostname": socket.getfqdn(),
             "network": self.get_network(),
             "total_bytes_sent": self.get_size(net_io.bytes_sent),
-            "total_bytes_received": self.get_size(net_io.bytes_recv)
-
+            "total_bytes_received": self.get_size(net_io.bytes_recv),
         }
 
-    
     def get_all_hardware(self) -> dict:
         uname = platform.uname()
         cpufreq = psutil.cpu_freq()
         svmem = psutil.virtual_memory()
         swap = psutil.swap_memory()
         disk_io = psutil.disk_io_counters()
-        
+
         return {
             "system": uname.system,
             "machine": uname.machine,
@@ -124,7 +121,12 @@ class Hardware:
             "current_cpu_freq": f"{cpufreq.current:.2f}Mhz",
             "max_cpu_freq": f"{cpufreq.max:.2f}Mhz",
             "min_cpu_freq": f"{cpufreq.min:.2f}Mhz",
-            "cpu_util_percent": [f"Core {i}: {percentage}%\n" for i, percentage in enumerate(psutil.cpu_percent(percpu=True, interval=1))],
+            "cpu_util_percent": [
+                f"Core {i}: {percentage}%\n"
+                for i, percentage in enumerate(
+                    psutil.cpu_percent(percpu=True, interval=1)
+                )
+            ],
             "total_cpu_usage": f"{psutil.cpu_percent()}%",
             "total_mem": self.get_size(svmem.total),
             "available_mem": self.get_size(svmem.available),
@@ -136,7 +138,7 @@ class Hardware:
             "mem_swap_percent": swap.percent,
             "disk_partitions": self.get_disk_partitions(),
             "disk_total_read": self.get_size(disk_io.read_bytes),
-            "disk_total_write": self.get_size(disk_io.write_bytes)
+            "disk_total_write": self.get_size(disk_io.write_bytes),
         }
 
     def get_all_python(self) -> dict:
