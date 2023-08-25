@@ -105,5 +105,43 @@
     </div>
   </div>
 
+  <hr>
+
+    <div class="row">
+      <div class="my-3">
+        <div class="p3 bg-body-tertiary">
+          <div class="container py-2">
+            <h2 class="text-body-emphasis">General Python Information</h2>
+            <p class="col-lg-8 mx-auto lead">
+            This section details general information about the python implementation, containing python version, directory, libraries etc.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="my-1">
+      <div class="table-responsive small">
+        <table class="table table-striped table-sm table-hover table-bordered">
+          <thead>
+            <tr>
+              <th scope="col">Information</th>
+              <th scope="col">Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for key,value in python.items() %}
+              <tr>
+                <td>{{ key }}</td>
+                <td>{{ value }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   </div>
 {% endblock %}
