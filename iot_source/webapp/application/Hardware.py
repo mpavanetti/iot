@@ -153,7 +153,3 @@ class Hardware:
             "base_prefix": sys.base_prefix,
             "pip_pkgs": self.get_pkgs(),
         }
-
-
-hard = Hardware()
-print(hard.get_all_network()["network"])
