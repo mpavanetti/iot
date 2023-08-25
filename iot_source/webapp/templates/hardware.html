@@ -7,7 +7,7 @@
         <div class="card" style="width: 18rem;">
             <div class="card-body">
               <h5 class="card-title">Platform</h5>
-              <p class="card-text">{{ fqdn }}</p>
+              <p class="card-text">{{ network["hostname"] }}</p>
             </div>
           </div>
       </div>
@@ -15,7 +15,7 @@
         <div class="card" style="width: 18rem;">
             <div class="card-body">
               <h5 class="card-title">Local Address</h5>
-              <p class="card-text">{{ local_ip }}</p>
+              <p class="card-text">{{ network["local_ip"] }}</p>
             </div>
           </div>
       </div>
@@ -23,7 +23,7 @@
         <div class="card" style="width: 18rem;">
             <div class="card-body">
               <h5 class="card-title">External Address</h5>
-              <p class="card-text">{{ external_ip }}</p>
+              <p class="card-text">{{ network["external_ip"] }}</p>
             </div>
           </div>
       </div>

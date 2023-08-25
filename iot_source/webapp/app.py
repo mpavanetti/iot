@@ -2,9 +2,7 @@ from flask import Flask, render_template, redirect
 import platform
 import socket
 
-import urllib.request
-
-external_ip = urllib.request.urlopen('https://ident.me').read().decode('utf8')
+from application.Hardware import Hardware
 
 
 app = Flask(__name__)
@@ -19,9 +17,9 @@ def home():
 
 @app.route('/hardware')
 def hardware():
+    hardware= Hardware()
     return render_template('hardware.html',
                            menu="hardware",
-                           uname=platform.uname(),
-                           fqdn=socket.getfqdn(),
-                           external_ip=external_ip,
-                           local_ip=socket.gethostbyname(socket.getfqdn()))
+                           network=hardware.get_all_network(),
+                           hardware= hardware.get_all_hardware(),
+                           python=hardware.get_all_python())
