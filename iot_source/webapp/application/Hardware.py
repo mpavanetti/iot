@@ -152,5 +152,5 @@ class Hardware:
             "executable": sys.executable,
             "sys.argv": sys.argv,
             "base_prefix": sys.base_prefix,
-            "pip_pkgs": self.get_pkgs(),
+            "pip_pkgs": "\n".join(self.get_pkgs()),
         }
