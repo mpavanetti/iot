@@ -114,19 +114,18 @@ class Hardware:
             "release": uname.release,
             "version": uname.version,
             "processor": uname.processor,
-            "api_version": sys.api_version,
             "boot_time": self.get_boot_time(),
             "physical_cpu_cores": psutil.cpu_count(logical=False),
             "total_cpu_cores": psutil.cpu_count(logical=True),
             "current_cpu_freq": f"{cpufreq.current:.2f}Mhz",
             "max_cpu_freq": f"{cpufreq.max:.2f}Mhz",
             "min_cpu_freq": f"{cpufreq.min:.2f}Mhz",
-            "cpu_util_percent": [
-                f"Core {i}: {percentage}%\n"
+            "cpu_util_percent": "\n".join([
+                f"Core {i}: {percentage}%"
                 for i, percentage in enumerate(
                     psutil.cpu_percent(percpu=True, interval=1)
                 )
-            ],
+            ]),
             "total_cpu_usage": f"{psutil.cpu_percent()}%",
             "total_mem": self.get_size(svmem.total),
             "available_mem": self.get_size(svmem.available),
