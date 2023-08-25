@@ -73,3 +73,8 @@
   .content {
     overflow-y: auto;
   }
+
+  .tile{
+    box-shadow: 3px 4px 10px #888888;
+    width: 18rem;
+  }
