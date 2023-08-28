@@ -1,8 +1,8 @@
-from machine import Pin, I2C        #importing relevant modules & classes
+from machine import Pin, I2C
 from time import sleep
-import bme280       #importing BME280 library
+import bme280 
 
-i2c=I2C(0,sda=Pin(0), scl=Pin(1), freq=400000)    #initializing the I2C method 
+i2c=I2C(0,sda=Pin(0), scl=Pin(1), freq=400000)
 led = Pin(2, Pin.OUT)
 pico_led = Pin("LED", Pin.OUT)
 
