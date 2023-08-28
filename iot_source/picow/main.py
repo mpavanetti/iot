@@ -1,18 +1,14 @@
-from machine import Pin
-import time
+# install module micropython_bme280
+from machine import Pin, I2C        #importing relevant modules & classes
+from time import sleep
+import bme280       #importing BME280 library
 
-led = Pin(0, Pin.OUT)
-led2 = Pin(1, Pin.OUT)
-btn = Pin(2, Pin.IN, Pin.PULL_UP)
-btn2 = Pin(7, Pin.IN, Pin.PULL_UP)
+i2c=I2C(0,sda=Pin(0), scl=Pin(1), freq=400000)    #initializing the I2C method 
+led = Pin(2, Pin.OUT)
 
 while True:
-    if btn.value() == 0:
-        led.value(1)
-        time.sleep(0.5)
-    elif btn2.value() == 0:
-        led2.value(1)
-        time.sleep(0.5)
-    else:
-        led.value(0)
-        led2.value(0)
+  led.value(1)  
+  bme = bme280.BME280(i2c=i2c)
+  print(bme.values)
+  led.value(0)
+  sleep(5)           
