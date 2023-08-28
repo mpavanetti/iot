@@ -8,8 +8,10 @@ Raspberry Pi Pico Wifi
 Documentation: [raspberrypi oficial documentation](https://www.raspberrypi.com/documentation/microcontrollers/raspberry-pi-pico.html)  
 Datasheet:  [raspberry pi oficial datasheet](https://datasheets.raspberrypi.com/picow/pico-w-datasheet.pdf?_gl=1*ciizzx*_ga*MjA3MTMyNTAyOC4xNjkzMTk2Njg0*_ga_22FD70LWDS*MTY5MzE5NjY4NC4xLjAuMTY5MzE5NjY4NC4wLjAuMA..)  
 Purchased at Amazon: [Raspberry pi pico w Amazon Canada](https://www.amazon.ca/Freenove-Raspberry-Compatible-Pre-Soldered-Development/dp/B0BJ1PGZCX/ref=sr_1_2_sspa?crid=1A6CTHIL4FI77&keywords=raspberry%2Bpi%2Bpico%2Bw&qid=1693196600&sprefix=raspberry%2Bpi%2Bpico%2Bw%2Caps%2C140&sr=8-2-spons&sp_csd=d2lkZ2V0TmFtZT1zcF9hdGY&th=1)  
-
+  
+  
 <img src="img/picow.jpg" alt="drawing" width="200"/>  
+  
 
 ### Pico Breadboard Kit
 Purchased at Amazon: [Pico Breadboard Kit Amazon Canada](https://www.amazon.ca/Freenove-Raspberry-Compatible-Pre-Soldered-Development/dp/B0BJ1PGZCX/ref=sr_1_2_sspa?crid=1A6CTHIL4FI77&keywords=raspberry%2Bpi%2Bpico%2Bw&qid=1693196600&sprefix=raspberry%2Bpi%2Bpico%2Bw%2Caps%2C140&sr=8-2-spons&sp_csd=d2lkZ2V0TmFtZT1zcF9hdGY&th=1).
