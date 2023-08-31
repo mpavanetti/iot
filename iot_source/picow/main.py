@@ -1,6 +1,9 @@
 from data import Data
-from machine import I2C
+from machine import Pin
 import time
+
+start_btn = Pin(7, Pin.IN, Pin.PULL_UP)
+stop_btn = Pin(8, Pin.IN, Pin.PULL_UP)
 
 
 with Data() as data:
@@ -9,16 +12,23 @@ with Data() as data:
     
     try:
         while True:
-            payload = {"picow":{"local_ip": local_ip,
-                        "temperature": data.get_board_temperature()},
-                        "bme280": data.read_bme280()}
-            
-            data.remoteHost_send(payload)
-            time.sleep(2)
+            time.sleep(1)
+            if start_btn.value() == 0:
+                
+                while True:
+                    time.sleep(2)
+                    
+                    payload = {"picow":{"local_ip": local_ip,
+                                        "temperature": data.get_board_temperature(),
+                                        "local_datetime": time.gmtime()},
+                               "bme280": data.read_bme280()}
+                    
+                    data.remoteHost_send(payload)
+                    if stop_btn.value() == 0:
+                        break
         
     except Exception as e:
-        print("[*] Program Aborted.")
-        print(f"Exception(Exception): {e}")
+        print(f"[*Exception]: {e}")
     except KeyboardInterrupt:
         print("[*] Keyboard Program Interrupted.")
         print(f"Exception(KeyboardInterrupt)")

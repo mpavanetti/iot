@@ -30,6 +30,7 @@ class Data:
     def __enter__(self):
         Pin("LED", Pin.OUT).on()
         self.wifi_connect()
+        print("Press the button 1 to start streaming. and button 2 to stop.")
         return self
         
     def __exit__(self, exc_type, exc_value, exc_traceback):
@@ -58,7 +59,8 @@ class Data:
             time.sleep(0.5)
             Pin(3, Pin.OUT).off()
         except Exception as error:
-            print(f'[*Exception] has been occured while sending data to remote host.: {error}')
+            print(f'[*Exception]: An error has been occured while connecting to remote host: {error}')
+            raise Exception(f"Remote Host Unrechhable: {error}")
             
     def get_board_temperature(self) -> float:
         adc = ADC(4) 
@@ -69,7 +71,8 @@ class Data:
         temp, press, hum = self.bme.values
         return {"temperature": temp,
                 "pressure": press,
-                "humidity": hum}
+                "humidity": hum,
+                "read_datatime": time.gmtime()}
                
         
         
