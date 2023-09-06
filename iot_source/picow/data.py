@@ -6,11 +6,11 @@ from machine import ADC, Pin, I2C
 from bme280 import BME280
 
 # Wifi, can be overwriten
-wifi_sid = "Home"
-wifi_pswd = "26022022"
+wifi_sid = ""
+wifi_pswd = ""
 
 # Remote Host, can be overwriten
-remote_port = 8080
+remote_port = 1500
 remote_address = ""
 
 # Sensor variables
