@@ -23,5 +23,5 @@ sudo docker exec -it infrastructure-kafka-1 /opt/bitnami/kafka/bin/kafka-console
 
 ### Pico W Json Sample:
 ```
-{"bme280": {"pressure": "890.07hPa", "temperature": "21.92C", "humidity": "44.83%", "read_datetime": "2023/9/6T15:31:51"}, "picow": {"local_ip": "192.168.1.74", "temperature": 24.24184}}
+{"bme280": {"pressure": "890.07hPa", "temperature": "21.92C", "humidity": "44.83%", "read_datetime": "2023-9-6 16:39:51"}, "picow": {"local_ip": "192.168.1.74", "temperature": 24.24184}}
 ```

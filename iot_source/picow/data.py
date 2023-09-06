@@ -6,8 +6,8 @@ from machine import ADC, Pin, I2C
 from bme280 import BME280
 
 # Wifi, can be overwriten
-wifi_sid = ""
-wifi_pswd = ""
+wifi_sid = "Home"
+wifi_pswd = "26022022"
 
 # Remote Host, can be overwriten
 remote_port = 8080
@@ -81,5 +81,6 @@ class Data:
             "temperature": temp,
             "pressure": press,
             "humidity": hum,
-            "read_datetime": f"{now[0]}/{now[1]}/{now[2]}T{now[3]}:{now[4]}:{now[5]}",
+            "read_datetime": f"{now[0]}-{now[1]}-{now[2]} {now[3]}:{now[4]}:{now[5]}",
         }
+
