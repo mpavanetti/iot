@@ -6,18 +6,20 @@ from machine import ADC, Pin, I2C
 from bme280 import BME280
 
 # Wifi, can be overwriten
-wifi_sid="Matheus’s iPhone"
-wifi_pswd="matheus22"
+wifi_sid = ""
+wifi_pswd = ""
 
 # Remote Host, can be overwriten
 remote_port = 8080
-remote_address = "4.205.25.155"
+remote_address = ""
 
 # Sensor variables
-i2c=I2C(0,sda=Pin(0), scl=Pin(1), freq=400000)
+i2c = I2C(0, sda=Pin(0), scl=Pin(1), freq=400000)
 
 class Data:
-    def __init__(self, port=remote_port, host=remote_address, sid=wifi_sid, pwd=wifi_pswd):
+    def __init__(
+        self, port=remote_port, host=remote_address, sid=wifi_sid, pwd=wifi_pswd
+    ):
         self.wifi_sid = sid
         self.wifi_pswd = pwd
         self.remote_port = port
@@ -26,27 +28,30 @@ class Data:
         self.wlan.active(True)
         self.i2c = i2c
         self.bme = BME280(i2c=self.i2c)
-        
+
     def __enter__(self):
         Pin("LED", Pin.OUT).on()
         self.wifi_connect()
         print("Press the button 1 to start streaming. and button 2 to stop.")
         return self
-        
+
     def __exit__(self, exc_type, exc_value, exc_traceback):
         Pin("LED", Pin.OUT).off()
         Pin(2, Pin.OUT).off()
         Pin(3, Pin.OUT).off()
-    
+
     def wifi_connect(self):
         try:
             self.wlan.connect(self.wifi_sid, self.wifi_pswd)
             print(f"* Local IP: {self.wlan.ifconfig()[0]}")
-            Pin(2, Pin.OUT).on()
+            if self.wlan.ifconfig()[0] != "0.0.0.0":
+                Pin(2, Pin.OUT).on()
+            else:
+                raise Exception("Unknown Network. Aborting.")
             return self.wlan
         except Exception as error:
-            print(f'[*Exception] has been occured while connecting to wifi.: {error}')
-            
+            print(f"[*Exception] has been occured while connecting to wifi.: {error}")
+
     def remoteHost_send(self, dictionary: dict):
         try:
             sock = socket.socket()
@@ -59,23 +64,21 @@ class Data:
             time.sleep(0.5)
             Pin(3, Pin.OUT).off()
         except Exception as error:
-            print(f'[*Exception]: An error has been occured while connecting to remote host: {error}')
+            print(
+                f"[*Exception]: An error has been occured while connecting to remote host: {error}"
+            )
             raise Exception(f"Remote Host Unrechhable: {error}")
-            
+
     def get_board_temperature(self) -> float:
-        adc = ADC(4) 
+        adc = ADC(4)
         ADC_voltage = adc.read_u16() * (3.3 / (65536))
-        return 27 - (ADC_voltage - 0.706)/0.001721
-    
+        return 27 - (ADC_voltage - 0.706) / 0.001721
+
     def read_bme280(self):
         temp, press, hum = self.bme.values
-        return {"temperature": temp,
-                "pressure": press,
-                "humidity": hum,
-                "read_datatime": time.gmtime()}
-               
-        
-        
-    
-        
-        
+        return {
+            "temperature": temp,
+            "pressure": press,
+            "humidity": hum,
+            "read_datatime": time.gmtime(),
+        }
