@@ -1,3 +1,4 @@
 .vscode/*
 iot_source/webapp/__pycache__/*
 iot_source/webapp/application/__pycache__/*
+iot_hub/infrastructure/config/mariadb/*
