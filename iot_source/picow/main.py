@@ -21,11 +21,9 @@ with Data(host="", port=8080) as data:
                         "picow": {
                             "local_ip": local_ip,
                             "temperature": data.get_board_temperature(),
-                            "local_datetime": time.gmtime(),
                         },
                         "bme280": data.read_bme280(),
                     }
-
                     data.remoteHost_send(payload)
 
     except Exception as e:

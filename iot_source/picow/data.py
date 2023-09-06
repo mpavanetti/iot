@@ -76,9 +76,10 @@ class Data:
 
     def read_bme280(self):
         temp, press, hum = self.bme.values
+        now = time.gmtime()
         return {
             "temperature": temp,
             "pressure": press,
             "humidity": hum,
-            "read_datatime": time.gmtime(),
+            "read_datetime": f"{now[0]}/{now[1]}/{now[2]}T{now[3]}:{now[4]}:{now[5]}",
         }
