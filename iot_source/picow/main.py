@@ -6,7 +6,7 @@ start_btn = Pin(7, Pin.IN, Pin.PULL_UP)
 stop_btn = Pin(8, Pin.IN, Pin.PULL_UP)
 
 
-with Data(host="", port=8080) as data:
+with Data(host="", port=1500) as data:
     local_ip = data.wlan.ifconfig()[0]
 
     try:
