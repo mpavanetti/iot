@@ -12,6 +12,7 @@ services:
       - ./jars:/home/jovyan/work/jars:rw
       - ./jobs:/home/jovyan/work/jobs:rw
       - ./notebooks:/home/jovyan/work/notebooks
+      - ./scripts:/home/jovyan/work/scripts:rw
     user: root
     environment:
       - GRANT_SUDO=yes
