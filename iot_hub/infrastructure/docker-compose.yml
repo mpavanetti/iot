@@ -80,6 +80,7 @@ services:
     image: docker.io/bitnami/kafka:3.5
     ports:
       - "9092:9092"
+      - "9093:9093"
       - "29092:29092"
     volumes:
       - "kafka_data:/bitnami"
@@ -94,12 +95,13 @@ services:
       # Listeners
       - ALLOW_PLAINTEXT_LISTENER=yes
       - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:29092
-      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://:9092,EXTERNAL://localhost:29092
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,EXTERNAL://localhost:29092
       - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT,INTERNAL:PLAINTEXT
       - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
       - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
     networks:
       - spark-network
+      - kafka-network
 
   python-socket:
     build:
@@ -109,14 +111,19 @@ services:
     environment:
       - SOCKET_PORT=1500
       - BOOTSTRAP_SERVERS=kafka:9092
+      - WAIT_TIME=50
       - KAFKA_TOPIC=iot_source
     networks:
-      - spark-network
+      - kafka-network
+    depends_on:
+      - kafka
     
 
 networks:
   spark-network:
     external: true
+    driver: bridge
+  kafka-network:
     driver: bridge
 
 volumes:
