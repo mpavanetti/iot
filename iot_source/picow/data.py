@@ -4,17 +4,22 @@ import json
 import time
 from machine import ADC, Pin, I2C
 from bme280 import BME280
+import rp2
+import binascii
 
 # Wifi, can be overwriten
-wifi_sid = ""
-wifi_pswd = ""
+wifi_sid = "raspberrypi"
+wifi_pswd = "matheus22"
 
 # Remote Host, can be overwriten
 remote_port = 1500
-remote_address = ""
+remote_address = "192.168.50.1"
 
 # Sensor variables
 i2c = I2C(0, sda=Pin(0), scl=Pin(1), freq=400000)
+
+# Country Location
+rp2.country('US')
 
 class Data:
     def __init__(
@@ -24,7 +29,7 @@ class Data:
         self.wifi_pswd = pwd
         self.remote_port = port
         self.remote_address = host
-        self.wlan = network.WLAN(network.STA_IF)
+        self.wlan = network.WLAN()
         self.wlan.active(True)
         self.i2c = i2c
         self.bme = BME280(i2c=self.i2c)
@@ -42,12 +47,18 @@ class Data:
 
     def wifi_connect(self):
         try:
-            self.wlan.connect(self.wifi_sid, self.wifi_pswd)
-            print(f"* Local IP: {self.wlan.ifconfig()[0]}")
-            if self.wlan.ifconfig()[0] != "0.0.0.0":
-                Pin(2, Pin.OUT).on()
-            else:
-                raise Exception("Unknown Network. Aborting.")
+            for i in range(10):  
+                if self.wlan.isconnected() != True:
+                    print("Waiting for connection...")
+                    Pin(15, Pin.OUT).on()
+                    self.wlan.connect(self.wifi_sid, self.wifi_pswd)
+                    time.sleep(3)
+                    Pin(15, Pin.OUT).off()
+                    time.sleep(1)
+                else:
+                    print(f"* Local IP: {self.wlan.ifconfig()[0]}")
+                    Pin(2, Pin.OUT).on()
+                    Pin(15, Pin.OUT).off()
             return self.wlan
         except Exception as error:
             print(f"[*Exception] has been occured while connecting to wifi.: {error}")
@@ -68,6 +79,12 @@ class Data:
                 f"[*Exception]: An error has been occured while connecting to remote host: {error}"
             )
             raise Exception(f"Remote Host Unrechhable: {error}")
+        
+    def list_networks(self):
+        networks = self.wlan.scan() # list with tuples (ssid, bssid, channel, RSSI, security, hidden)
+        networks.sort(key=lambda x:x[3],reverse=True) # sorted on RSSI (3)
+        for i, w in enumerate(networks):
+              print(i+1, w[0].decode(), binascii.hexlify(w[1]).decode(), w[2], w[3], w[4], w[5])
 
     def get_board_temperature(self) -> float:
         adc = ADC(4)
