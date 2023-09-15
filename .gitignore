@@ -5,3 +5,5 @@ iot_hub/infrastructure/config/mariadb/*
 iot_hub/infrastructure/notebooks/.ipynb_checkpoints/*
 iot_hub/infrastructure/data/*
 iot_hub/infrastructure/notebooks/spark-warehouse/
+iot_hub/webapp/__pycache__/*
+iot_hub/webapp/application/__pycache__/*
