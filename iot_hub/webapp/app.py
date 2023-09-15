@@ -22,4 +22,7 @@ def hardware():
                            menu="hardware",
                            network=hardware.get_all_network(),
                            hardware= hardware.get_all_hardware(),
-                           python=hardware.get_all_python())
+                          python=hardware.get_all_python())
+
+if __name__ == '__main__':
+	app.run(debug=True, port=8001, host='0.0.0.0') 
