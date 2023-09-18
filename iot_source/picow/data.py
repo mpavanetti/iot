@@ -8,7 +8,7 @@ import rp2
 import binascii
 
 # Wifi, can be overwriten
-wifi_sid = "raspberrypi"
+wifi_sid = "raspberry"
 wifi_pswd = "matheus22"
 
 # Remote Host, can be overwriten
@@ -47,20 +47,18 @@ class Data:
 
     def wifi_connect(self):
         try:
-            for i in range(10): 
-                if self.wlan.isconnected() != True:
+            if self.wlan.isconnected() != True:
+                for i in range(10):
                     print("Waiting for connection...")
                     Pin(15, Pin.OUT).on()
                     self.wlan.connect(self.wifi_sid, self.wifi_pswd)
                     time.sleep(3)
                     Pin(15, Pin.OUT).off()
                     time.sleep(1)
-                else:
-                    print(f"* Local IP: {self.wlan.ifconfig()[0]}")
-                    Pin(2, Pin.OUT).on()
-                    Pin(15, Pin.OUT).off()
             else:
-                raise Exception(f" Tried all attempts to connect to wifi network {self.wifi_sid}")
+                print(f"* Local IP: {self.wlan.ifconfig()[0]}")
+                Pin(2, Pin.OUT).on()
+                Pin(15, Pin.OUT).off()
             return self.wlan
         except Exception as error:
             print(f"[*Exception] has been occured while connecting to wifi.: {error}")
@@ -102,4 +100,3 @@ class Data:
             "humidity": hum,
             "read_datetime": f"{now[0]}-{now[1]}-{now[2]} {now[3]}:{now[4]}:{now[5]}",
         }
-
