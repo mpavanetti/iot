@@ -1,7 +1,12 @@
+# Required Libraries"
+# micropython-uuid
+# micropython-bme280
+
 from data import Data
 from machine import Pin
 import time
-
+import uuid
+  
 start_btn = Pin(7, Pin.IN, Pin.PULL_UP)
 stop_btn = Pin(8, Pin.IN, Pin.PULL_UP)
 
@@ -19,6 +24,7 @@ with Data() as data:
                         break
                     payload = {
                         "picow": {
+                            "id": uuid.uuid1(),
                             "local_ip": local_ip,
                             "temperature": data.get_board_temperature(),
                         },
@@ -31,3 +37,4 @@ with Data() as data:
     except KeyboardInterrupt:
         print("[*] Keyboard Program Interrupted.")
         print(f"Exception(KeyboardInterrupt)")
+

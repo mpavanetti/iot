@@ -47,7 +47,7 @@ class Data:
 
     def wifi_connect(self):
         try:
-            for i in range(10):  
+            for i in range(10): 
                 if self.wlan.isconnected() != True:
                     print("Waiting for connection...")
                     Pin(15, Pin.OUT).on()
@@ -59,6 +59,8 @@ class Data:
                     print(f"* Local IP: {self.wlan.ifconfig()[0]}")
                     Pin(2, Pin.OUT).on()
                     Pin(15, Pin.OUT).off()
+            else:
+                raise Exception(f" Tried all attempts to connect to wifi network {self.wifi_sid}")
             return self.wlan
         except Exception as error:
             print(f"[*Exception] has been occured while connecting to wifi.: {error}")
