@@ -5,13 +5,20 @@
 ### Download latest version of raspbian os
 https://downloads.raspberrypi.org/raspios_arm64/images/
 
+### Update your Raspbian OS 64 bits
+```
+sudo apt-get update && sudo apt-get upgrade
+```
 
 #### Setup Raspberry pi as a router
-https://raspap.com/#quick
-
+```
+curl -sL https://install.raspap.com | bash
+```
 
 #### Install Docker
-https://docs.docker.com/engine/install/raspberry-pi-os/
+```
+curl -sSL https://get.docker.com | sh
+```
 
 ### Install Docker-Compose
 ```
@@ -23,7 +30,6 @@ pip install docker-compose
 ```
 # Run the following commands:
 sudo docker network create spark-network
-sudo docker network create kafka-network
 
 sudo docker-compose up -d
 ```
