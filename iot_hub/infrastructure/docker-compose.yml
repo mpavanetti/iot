@@ -123,17 +123,6 @@ services:
     restart: on-failure
     depends_on:
       - kafka
-  
-  redis:
-    image: redis:6.2-alpine
-    restart: on-failure
-    ports:
-      - '6379:6379'
-    command: redis-server --save 20 1 --loglevel warning
-    volumes: 
-      - "./redis:/data"
-    networks:
-      - spark-network
       
 networks:
   spark-network:
