@@ -33,15 +33,23 @@
         </a>
       </li>
       <li>
-        <a href="#" class="nav-link link-body-emphasis">
-          <i class="bi bi-speedometer ml-2"></i>
-          Dashboard
+        {% if menu=="streaming" %}
+            <a href="streaming" class="nav-link active" aria-current="page">
+              <i class="bi bi-cast"></i>
+              Streaming
+           </a>
+        {% else %}
+            <a href="streaming" class="nav-link link-body-emphasis">
+              <i class="bi bi-cast"></i>
+              Streaming
+            </a>
+        {% endif %} 
         </a>
       </li>
       <li>
         <a href="#" class="nav-link link-body-emphasis">
-            <i class="bi bi-cast"></i>
-          Streaming
+          <i class="bi bi-speedometer ml-2"></i>
+          Dashboard
         </a>
       </li>
       <li>
