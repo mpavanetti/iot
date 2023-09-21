@@ -15,6 +15,7 @@ import subprocess
 class Hardware:
     def __init__(self):
         self.hostname = socket.getfqdn()
+        self.picow_ip = "192.158.50.1"
 
     def get_cpu_usage(self):
         return psutil.cpu_percent(interval=1)    

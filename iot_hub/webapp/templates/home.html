@@ -63,28 +63,18 @@
                 <td>
                   Raspberri Pi 4
                 </td>
-                <td>{{ dataset["local_ip"] }}</td>
-                <td>
-                  {% if dataset["local_alive"] == true %}
-                  <span class="badge bg-success">ONLINE</span>
-                  {% else %}
-                  <span class="badge bg-danger">OFFLINE</span>
-                  {% endif %}
+                <td id="local_ip">
+                </td>
+                <td id="local_alive">
                 </td>
               </tr>
               <tr>
                 <td>
                   Raspberry Pi Pico W
                 </td>
-                <td>
-                  192.168.1.80
+                <td id="picow_ip">
                 </td>
-                <td>
-                  {% if dataset["picow_alive"] == true %}
-                  <span class="badge bg-success">ONLINE</span>
-                  {% else %}
-                  <span class="badge bg-danger">OFFLINE</span>
-                  {% endif %}
+                <td id="picow_alive">
                 </td>
               </tr>
             </tbody>
@@ -100,9 +90,9 @@
                   <th colspan="1">RAM</th>
                   <th colspan="1">DISK</th>
                   <tr>
-                    <td>{{ dataset["cpu_usage"] }}%</td>
-                    <td>{{ dataset["mem_usage"] }}%</td>
-                    <td>{{ dataset["disk_usage"] }}%</td>
+                    <td id="pi4_cpu"></td>
+                    <td id="pi4_mem"></td>
+                    <td id="pi4_disk"></td>
                   </tr>
                 </table>
               </td>
@@ -130,4 +120,7 @@
 
   </div>
 </div>
+
+<script src="{{ url_for('static', filename= 'js/home.js') }}"></script>
+
 {% endblock %}
