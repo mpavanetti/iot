@@ -12,6 +12,13 @@ from kafka import KafkaConsumer
 logging.basicConfig(stream=sys.stdout, level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
+consumer = KafkaConsumer(
+            'iot_source',
+            bootstrap_servers=['kafka:9092'],
+            auto_offset_reset = 'latest',
+            group_id=None,
+)
+
 
 app = Flask(__name__)
 
@@ -51,13 +58,6 @@ def hardware():
 
 @app.route('/streaming')
 def streaming():
-     consumer = KafkaConsumer(
-                'iot_source',
-                bootstrap_servers=['localhost:29092'],
-                auto_offset_reset = 'latest',
-                group_id=None,
-)
-
      return render_template('streaming.html')
 
 
