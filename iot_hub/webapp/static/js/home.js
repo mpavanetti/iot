@@ -41,6 +41,7 @@ function load_host_hardware() {
         url: "/api/load_host_hardware",
         context: document.body,
     }).done(function(data) {
+            $("#live").show()
             // pi4 hardware utilization
             $("#pi4_cpu").text(`${data.cpu_usage}%`);
             $("#pi4_mem").text(`${data.mem_usage}%`);
