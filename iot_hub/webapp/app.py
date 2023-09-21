@@ -18,7 +18,7 @@ app = Flask(__name__)
 
 consumer = KafkaConsumer(
     'iot_source',
-    bootstrap_servers=['192.168.1.80:29092'],
+    bootstrap_servers=['localhost:29092'],
     auto_offset_reset = 'latest',
     group_id=None,
 )
