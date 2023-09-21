@@ -129,11 +129,8 @@ networks:
     external: true
     driver: bridge
   kafka-network:
-    external: true
     driver: bridge
 
 volumes:
   kafka_data:
-    driver: local
-  redis:
     driver: local
