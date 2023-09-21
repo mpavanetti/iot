@@ -23,17 +23,23 @@ def routing():
 def home():
     return render_template('home.html')
 
-@app.route('/api/load_home_data')
-def home_date():
+@app.route('/api/check_host_status')
+def host_status():
     hardware = Hardware()
     dataset = {"local_ip": hardware.get_local_ip(),
                "picow_ip": hardware.picow_ip,
                 "local_alive": hardware.check_if_host_alive(hardware.get_local_ip()),
-                "picow_alive": hardware.check_if_host_alive(hardware.picow_ip),
-                "cpu_usage": hardware.get_cpu_usage(),
+                "picow_alive": hardware.check_if_host_alive(hardware.picow_ip)}
+    return dataset
+
+@app.route('/api/load_host_hardware')
+def host_hardware():
+    hardware = Hardware()
+    dataset = {"cpu_usage": hardware.get_cpu_usage(),
                 "mem_usage": hardware.get_mem_usage(),
                 "disk_usage": hardware.get_disk_usage()}
     return dataset
+ 
 
 @app.route('/hardware')
 def hardware():
