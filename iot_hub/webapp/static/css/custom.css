@@ -14,7 +14,7 @@
 
   .b-example-divider {
     width: 100%;
-    height: 3rem;
+    /* height: 3rem; */
     background-color: rgba(0, 0, 0, .1);
     border: solid rgba(0, 0, 0, .15);
     border-width: 1px 0;
@@ -24,7 +24,7 @@
   .b-example-vr {
     flex-shrink: 0;
     width: 1.5rem;
-    height: 100vh;
+   /* height: 100vh; */
   }
 
   .bi {

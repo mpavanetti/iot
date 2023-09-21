@@ -1,12 +1,19 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en" data-bs-theme="auto">
-{% include 'default/head.html' %}
-  <body>
+    {% include 'default/head.html' %}
+    <body>
         {% include 'default/themebtn.html' %}
-        <main class="d-flex flex-nowrap">
-            {% include 'default/navbar.html' %}
-            <div class="b-example-divider b-example-vr"></div>
-            {% block content %} {% endblock %}
+        <main>
+            <div class="container-fluid">
+                <div class="row flex-nowrap">
+                    {% include 'default/navbar.html' %}
+                    <div class="b-example-divider b-example-vr"></div>
+                    <div class="col py-3">
+                        {% block content %} {% endblock %}
+                    </div>
+                    <div class="b-example-divider b-example-vr"></div>
+                </div>
+            </div>
         </main>
         {% include 'default/footer.html' %}
     </body>
