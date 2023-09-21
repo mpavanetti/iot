@@ -2,7 +2,6 @@ from flask import Flask, render_template, redirect, Response, request, stream_wi
 from application.Hardware import Hardware
 
 import logging
-import random
 import sys
 import time
 import json
@@ -16,34 +15,41 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-consumer = KafkaConsumer(
-    'iot_source',
-    bootstrap_servers=['localhost:29092'],
-    auto_offset_reset = 'latest',
-    group_id=None,
-)
-
 @app.route('/')
 def routing():
     return redirect('/home')
 
 @app.route('/home')
 def home():
-    return render_template('home.html',menu="home")
+    hardware = Hardware()
+    dataset = {"local_ip": hardware.get_local_ip(),
+               "local_alive": hardware.check_if_host_alive(hardware.get_local_ip()),
+               "picow_alive": hardware.check_if_host_alive("picow"),
+               "cpu_usage": hardware.get_cpu_usage(),
+               "mem_usage": hardware.get_mem_usage(),
+               "disk_usage": hardware.get_disk_usage()}
+
+    return render_template('home.html', 
+                           dataset=dataset)
 
 @app.route('/hardware')
 def hardware():
     hardware= Hardware()
     return render_template('hardware.html',
-                           menu="hardware",
                            network=hardware.get_all_network(),
                            hardware= hardware.get_all_hardware(),
-                          python=hardware.get_all_python())
+                           python=hardware.get_all_python())
 
 @app.route('/streaming')
 def streaming():
-     return render_template('streaming.html',
-                            menu="streaming",)
+     consumer = KafkaConsumer(
+                'iot_source',
+                bootstrap_servers=['localhost:29092'],
+                auto_offset_reset = 'latest',
+                group_id=None,
+)
+
+     return render_template('streaming.html')
 
 
 

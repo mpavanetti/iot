@@ -1,32 +1,133 @@
 {% extends 'base.html' %}
 
 {% block content %}
-  <div class="container text-center py-4 px-3 mx-auto">
-    <div class="row">
-      <div class="col-md-4">
-        <div class="card" style="width: 18rem;">
-            <div class="card-body">
-              <h5 class="card-title">Streamed Messages</h5>
-              <p class="card-text">Some quick example text</p>
-            </div>
-          </div>
-      </div>
-      <div class="col-md-4">
-        <div class="card" style="width: 18rem;">
-            <div class="card-body">
-              <h5 class="card-title">Operations</h5>
-              <p class="card-text">Some quick example text</p>
-            </div>
-          </div>
-      </div>
-      <div class="col-md-4">
-        <div class="card" style="width: 18rem;">
-            <div class="card-body">
-              <h5 class="card-title">Operations</h5>
-              <p class="card-text">Some quick example text</p>
-            </div>
-          </div>
+<div class="row">
+  <h1>Home</h1>
+</div>
+
+<div class="container text-center py-4">
+  <div class="row">
+
+    <div class="col-6">
+      <div class="card">
+        <div class="card-header border-0">
+          <h3 class="card-title">Infrastructure Service</h3>
+        </div>
+        <div class="card-body table-responsive p-0">
+          <table class="table table-striped table-valign-middle">
+            <thead>
+              <tr>
+                <th>Service</th>
+                <th>Host</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  Maria DB
+                </td>
+                <td>
+                  mariadb
+                </td>
+                <td>
+                  <span class="badge bg-danger">OFFLINE</span>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  Kafka Broker
+                </td>
+                <td>
+                  kafka
+                </td>
+                <td>
+                  <span class="badge bg-success">ONLINE</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
+
+    <div class="col-6">
+      <div class="card">
+        <div class="card-header border-0">
+          <h3 class="card-title">Host Status</h3>
+        </div>
+        <div class="card-body table-responsive p-0">
+          <table class="table table-striped table-valign-middle">
+            <tbody>
+              <tr>
+                <td>
+                  Raspberri Pi 4
+                </td>
+                <td>{{ dataset["local_ip"] }}</td>
+                <td>
+                  {% if dataset["local_alive"] == true %}
+                  <span class="badge bg-success">ONLINE</span>
+                  {% else %}
+                  <span class="badge bg-danger">OFFLINE</span>
+                  {% endif %}
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  Raspberry Pi Pico W
+                </td>
+                <td>
+                  192.168.1.80
+                </td>
+                <td>
+                  {% if dataset["picow_alive"] == true %}
+                  <span class="badge bg-success">ONLINE</span>
+                  {% else %}
+                  <span class="badge bg-danger">OFFLINE</span>
+                  {% endif %}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <table class="table table-bordered">
+            <th colspan="3">Raspberry Overall Host Usage</th>
+            <tr>
+              <td>Pi 4</td>
+              <td>
+                <table class="table table-bordered">
+                  <th colspan="1">CPU</th>
+                  <th colspan="1">RAM</th>
+                  <th colspan="1">DISK</th>
+                  <tr>
+                    <td>{{ dataset["cpu_usage"] }}%</td>
+                    <td>{{ dataset["mem_usage"] }}%</td>
+                    <td>{{ dataset["disk_usage"] }}%</td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td>Pi Pico W</td>
+              <td>
+                <table class="table table-bordered">
+                  <th colspan="1">CPU</th>
+                  <th colspan="1">RAM</th>
+                  <th colspan="1">DISK</th>
+                  <tr>
+                    <td>None</td>
+                    <td>None</td>
+                    <td>None</td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+
+        </div>
+      </div>
+    </div>
+
   </div>
+</div>
 {% endblock %}

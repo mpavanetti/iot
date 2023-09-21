@@ -8,11 +8,25 @@ import sys
 import pkg_resources
 import psutil
 from datetime import datetime
+import os
+import subprocess
 
 
 class Hardware:
     def __init__(self):
-        all_dict = {}
+        self.hostname = socket.getfqdn()
+
+    def get_cpu_usage(self):
+        return psutil.cpu_percent(interval=1)    
+    
+    def get_mem_usage(self):
+        return psutil.virtual_memory().percent
+    
+    def get_disk_usage(self):
+        return psutil.disk_usage('/').percent
+
+    def check_if_host_alive(self, host:str)-> bool:
+        return True if subprocess.run(["ping", "-c", "1","-w","1", host]).returncode == 0 else False
 
     def get_local_ip(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -94,7 +108,7 @@ class Hardware:
         return {
             "local_ip": self.get_local_ip(),
             "external_ip": self.get_external_ip(),
-            "hostname": socket.getfqdn(),
+            "hostname": self.hostname,
             "network": self.get_network(),
             "total_bytes_sent": self.get_size(net_io.bytes_sent),
             "total_bytes_received": self.get_size(net_io.bytes_recv),
