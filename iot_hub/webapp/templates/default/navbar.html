@@ -1,63 +1,102 @@
-<div class="d-flex flex-column flex-shrink-0 p-3 bg-body-tertiary" style="width: 280px;">
-    <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto link-body-emphasis text-decoration-none">
-      <img src="static/images/raspberry-pi.png" class="img-fluid" alt="rasp">
-      <span class="fs-4 pl-2">Raspberry Pi Board</span>
+<div class="col-auto col-md-3 col-xl-2 px-sm-2 px-0 bg-dark">
+  <div
+    class="d-flex flex-column align-items-center align-items-sm-start px-3 pt-2 text-white min-vh-100">
+    <a
+      href="/"
+      class="d-flex align-items-center pb-3 mb-md-0 me-md-auto text-white text-decoration-none">
+      <span class="fs-5 d-none d-sm-inline">
+        <img src="static/images/raspberry-pi.png" class="img-fluid" alt="rasp">
+        Raspberry Pi
+      </span>
     </a>
-    <hr>
-    <ul class="nav nav-pills flex-column mb-auto">
+    <ul
+      class="nav nav-pills flex-column mb-sm-auto mb-0 align-items-center align-items-sm-start"
+      id="menu">
       <li class="nav-item">
-        {% if menu=="home" %}
-            <a href="home" class="nav-link active" aria-current="page">
-                <i class="bi bi-house"></i>
-                Home
-           </a>
-        {% else %}
-            <a href="home" class="nav-link link-body-emphasis">
-                <i class="bi bi-house"></i>
-                  Home
-            </a>
-        {% endif %}   
-      </li>
-      <li>
-        {% if menu=="hardware" %}
-            <a href="hardware" class="nav-link active" aria-current="page">
-              <i class="bi bi-motherboard"></i>
-              Hardware
-           </a>
-        {% else %}
-            <a href="hardware" class="nav-link link-body-emphasis">
-              <i class="bi bi-motherboard"></i>
-                Hardware
-            </a>
-        {% endif %} 
+        <a href="home" class="nav-link align-middle px-0">
+          <i class="fs-4 bi-house"></i>
+          <span class="ms-1 d-none d-sm-inline">Home</span>
         </a>
       </li>
       <li>
-        {% if menu=="streaming" %}
-            <a href="streaming" class="nav-link active" aria-current="page">
-              <i class="bi bi-cast"></i>
-              Streaming
-           </a>
-        {% else %}
-            <a href="streaming" class="nav-link link-body-emphasis">
-              <i class="bi bi-cast"></i>
-              Streaming
-            </a>
-        {% endif %} 
+        <a
+          href="dashboard"
+          class="nav-link px-0 align-middle">
+          <i class="fs-4 bi-speedometer2"></i>
+          <span class="ms-1 d-none d-sm-inline">Dashboard</span>
         </a>
       </li>
       <li>
-        <a href="#" class="nav-link link-body-emphasis">
-          <i class="bi bi-speedometer ml-2"></i>
-          Dashboard
+        <a href="hardware" class="nav-link px-0 align-middle">
+          <i class="fs-4 bi-motherboard"></i>
+          <span class="ms-1 d-none d-sm-inline">Hardware</span>
         </a>
       </li>
       <li>
-        <a href="#" class="nav-link link-body-emphasis">
-           <i class="bi bi-cpu"></i>
-          Pico Board
+        <a href="streaming" class="nav-link px-0 align-middle">
+          <i class="fs-4 bi-cast"></i>
+          <span class="ms-1 d-none d-sm-inline">Streaming</span>
         </a>
+      </li>
+      <li>
+        <a
+          href="#submenu2"
+          data-bs-toggle="collapse"
+          class="nav-link px-0 align-middle">
+          <i class="fs-4 bi-pc-display-horizontal"></i>
+          <span class="ms-1 d-none d-sm-inline">Infrastructure</span></a>
+        <ul
+          class="collapse nav flex-column ms-1"
+          id="submenu2"
+          data-bs-parent="#menu">
+          <li class="w-100">
+            <a href="http://localhost:8888/" class="nav-link px-0">
+              <span class="d-none d-sm-inline">Jupyter</span> Lab</a>
+          </li>
+          <li>
+            <a href="http://localhost:8080/" class="nav-link px-0">
+              <span class="d-none d-sm-inline">Spark</span> Master</a>
+          </li>
+          <li>
+            <a href="http://localhost:8081/" class="nav-link px-0">
+              <span class="d-none d-sm-inline">Spark</span> Worker 1</a>
+          </li>
+          <li>
+            <a href="http://localhost:8082/" class="nav-link px-0">
+              <span class="d-none d-sm-inline">Spark</span> Worker 2</a>
+          </li>
+          <li>
+            <a href="http://localhost:8085/" class="nav-link px-0">
+              <span class="d-none d-sm-inline">Access</span> Point</a>
+          </li>
+        </ul>
       </li>
     </ul>
-    <hr>
+    <hr />
+    <div class="dropdown pb-4">
+      <a
+        href="#"
+        class="d-flex align-items-center text-white text-decoration-none dropdown-toggle"
+        id="dropdownUser1"
+        data-bs-toggle="dropdown"
+        aria-expanded="false">
+        <img
+          src="https://github.com/mpavanetti.png"
+          alt="hugenerd"
+          width="30"
+          height="30"
+          class="rounded-circle" />
+        <span class="d-none d-sm-inline mx-1">Matheus Pavanetti</span>
+      </a>
+      <ul class="dropdown-menu dropdown-menu-dark text-small shadow">
+        <li><a class="dropdown-item" href="#">New project...</a></li>
+        <li><a class="dropdown-item" href="#">Settings</a></li>
+        <li><a class="dropdown-item" href="#">Profile</a></li>
+        <li>
+          <hr class="dropdown-divider" />
+        </li>
+        <li><a class="dropdown-item" href="#">Sign out</a></li>
+      </ul>
+    </div>
   </div>
+</div>

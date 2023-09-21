@@ -1,0 +1,63 @@
+<div class="d-flex flex-column flex-shrink-0 p-3 bg-body-tertiary" style="width: 280px;">
+    <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto link-body-emphasis text-decoration-none">
+      <img src="static/images/raspberry-pi.png" class="img-fluid" alt="rasp">
+      <span class="fs-4 pl-2">Raspberry Pi Board</span>
+    </a>
+    <hr>
+    <ul class="nav nav-pills flex-column mb-auto">
+      <li class="nav-item">
+        {% if menu=="home" %}
+            <a href="home" class="nav-link active" aria-current="page">
+                <i class="bi bi-house"></i>
+                Home
+           </a>
+        {% else %}
+            <a href="home" class="nav-link link-body-emphasis">
+                <i class="bi bi-house"></i>
+                  Home
+            </a>
+        {% endif %}   
+      </li>
+      <li>
+        {% if menu=="hardware" %}
+            <a href="hardware" class="nav-link active" aria-current="page">
+              <i class="bi bi-motherboard"></i>
+              Hardware
+           </a>
+        {% else %}
+            <a href="hardware" class="nav-link link-body-emphasis">
+              <i class="bi bi-motherboard"></i>
+                Hardware
+            </a>
+        {% endif %} 
+        </a>
+      </li>
+      <li>
+        {% if menu=="streaming" %}
+            <a href="streaming" class="nav-link active" aria-current="page">
+              <i class="bi bi-cast"></i>
+              Streaming
+           </a>
+        {% else %}
+            <a href="streaming" class="nav-link link-body-emphasis">
+              <i class="bi bi-cast"></i>
+              Streaming
+            </a>
+        {% endif %} 
+        </a>
+      </li>
+      <li>
+        <a href="#" class="nav-link link-body-emphasis">
+          <i class="bi bi-speedometer ml-2"></i>
+          Dashboard
+        </a>
+      </li>
+      <li>
+        <a href="#" class="nav-link link-body-emphasis">
+           <i class="bi bi-cpu"></i>
+          Pico Board
+        </a>
+      </li>
+    </ul>
+    <hr>
+  </div>
