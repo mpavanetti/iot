@@ -39,6 +39,7 @@ class Streaming:
                     {
                         "time": data["bme280"]["read_datetime"],
                         "bme_280_temperature": float(data["bme280"]["temperature"].replace("C", "")),
+                        "bme_280_pressure": float(data["bme280"]["pressure"].replace("hPa", "")),
                         "picow_temperature": float(data["picow"]["temperature"])
                     }
                 )

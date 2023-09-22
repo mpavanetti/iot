@@ -37,11 +37,22 @@
       <div class="col">
         <div class="card">
           <div class="card-body">
-              <canvas id="canvas"></canvas>
+              <canvas id="temperature_canvas"></canvas>
           </div>
       </div>
       </div>
     </div>
+
+    <div class="row py-4">
+      <div class="col">
+        <div class="card">
+          <div class="card-body">
+              <canvas id="pressure_canvas"></canvas>
+          </div>
+      </div>
+      </div>
+    </div>
+
   </div>
 
 <script src="{{ url_for('static', filename= 'js/chart.min.js') }}"></script>
