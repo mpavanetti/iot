@@ -18,16 +18,20 @@ class Hardware:
         self.picow_ip = "192.158.50.1"
 
     def get_cpu_usage(self):
-        return psutil.cpu_percent(interval=1)    
-    
+        return psutil.cpu_percent(interval=1)
+
     def get_mem_usage(self):
         return psutil.virtual_memory().percent
-    
-    def get_disk_usage(self):
-        return psutil.disk_usage('/').percent
 
-    def check_if_host_alive(self, host:str)-> bool:
-        return True if subprocess.run(["ping", "-c", "1","-w","1", host]).returncode == 0 else False
+    def get_disk_usage(self):
+        return psutil.disk_usage("/").percent
+
+    def check_if_host_alive(self, host: str) -> bool:
+        return (
+            True
+            if subprocess.run(["ping", "-c", "1", "-w", "1", host]).returncode == 0
+            else False
+        )
 
     def get_local_ip(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -135,12 +139,14 @@ class Hardware:
             "current_cpu_freq": f"{cpufreq.current:.2f}Mhz",
             "max_cpu_freq": f"{cpufreq.max:.2f}Mhz",
             "min_cpu_freq": f"{cpufreq.min:.2f}Mhz",
-            "cpu_util_percent": "\n".join([
-                f"Core {i}: {percentage}%"
-                for i, percentage in enumerate(
-                    psutil.cpu_percent(percpu=True, interval=1)
-                )
-            ]),
+            "cpu_util_percent": "\n".join(
+                [
+                    f"Core {i}: {percentage}%"
+                    for i, percentage in enumerate(
+                        psutil.cpu_percent(percpu=True, interval=1)
+                    )
+                ]
+            ),
             "total_cpu_usage": f"{psutil.cpu_percent()}%",
             "total_mem": self.get_size(svmem.total),
             "available_mem": self.get_size(svmem.available),
