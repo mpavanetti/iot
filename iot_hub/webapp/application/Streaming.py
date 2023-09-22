@@ -38,13 +38,21 @@ class Streaming:
                 json_data = json.dumps(
                     {
                         "time": data["bme280"]["read_datetime"],
-                        "bme_280_temperature": float(data["bme280"]["temperature"].replace("C", "")),
-                        "bme_280_humidity": float(data["bme280"]["humidity"].replace("%", "")),
-                        "bme_280_pressure": float(data["bme280"]["pressure"].replace("hPa", "")),
+                        "bme_280_temperature": float(
+                            data["bme280"]["temperature"].replace("C", "")
+                        ),
+                        "bme_280_humidity": float(
+                            data["bme280"]["humidity"].replace("%", "")
+                        ),
+                        "bme_280_pressure": float(
+                            data["bme280"]["pressure"].replace("hPa", "")
+                        ),
                         "picow_temperature": float(data["picow"]["temperature"]),
                         "picow_mem_alloc_bytes": int(data["picow"]["mem_alloc_bytes"]),
                         "picow_mem_free_bytes": int(data["picow"]["mem_free_bytes"]),
-                        "picow_free_storage_kb": float(data["picow"]["free_storage_kb"]),
+                        "picow_free_storage_kb": float(
+                            data["picow"]["free_storage_kb"]
+                        ),
                         "picow_free_cpu_freq_mhz": float(data["picow"]["cpu_freq_mhz"]),
                         "picow_local_ip": str(data["picow"]["local_ip"]),
                     }

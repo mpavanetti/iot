@@ -23,7 +23,6 @@ class Hardware:
         check = a_socket.connect_ex(location)
         a_socket.close()
         return True if check == 0 else False
-        
 
     def get_cpu_usage(self):
         return psutil.cpu_percent(interval=1)
