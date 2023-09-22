@@ -1,3 +1,33 @@
+// Function for loading infrastructure services status.
+function check_infrastructure() {
+
+    // loop 1 minute
+    setTimeout(check_infrastructure,60000);
+
+    // api call 
+    $.ajax({
+        url: "/api/check_ports",
+        context: document.body,
+        beforeSend : function(){
+                // Show image container
+                $('.spinner-border2').show()
+                $('.destroy2').remove()
+            },
+    }).done(function(data) {
+        $('#refresh').show()
+
+        $.each(data, function(index, value) {
+            if(value == true) {
+                $(`#${index}`).append(`<span class="badge bg-success destroy2">ONLINE</span>`)
+            } else {
+                $(`#${index}`).append(`<span class="badge bg-danger destroy2">OFFLINE</span>`)
+            }
+        });
+
+        $('.spinner-border').hide()    
+    });
+}
+
 // Function for loading host status.
 function check_host_status() {
 
@@ -54,6 +84,7 @@ function load_host_hardware() {
 $( document ).ready(function() {
     console.log( "home.js loaded !" );
 
+    check_infrastructure()
     load_host_hardware()
     check_host_status()
 

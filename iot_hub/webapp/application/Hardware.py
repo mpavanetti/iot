@@ -17,6 +17,14 @@ class Hardware:
         self.hostname = socket.getfqdn()
         self.picow_ip = "192.158.50.1"
 
+    def check_port(self, host, port):
+        a_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        location = (host, port)
+        check = a_socket.connect_ex(location)
+        a_socket.close()
+        return True if check == 0 else False
+        
+
     def get_cpu_usage(self):
         return psutil.cpu_percent(interval=1)
 
