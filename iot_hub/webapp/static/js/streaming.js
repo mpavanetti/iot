@@ -193,7 +193,7 @@ $(document).ready(function () {
         gaugeChart.update();
 
         //string_array = [data.picow_mem_alloc_bytes, data.picow_mem_free_bytes]
-        memory_config.data.datasets[0].data.fill(data.picow_mem_alloc_bytes)
+        memory_config.data.datasets[0].data.fill(data.picow_mem_alloc_bytes,0)
         memory_config.data.datasets[0].data.fill(data.picow_mem_free_bytes,1)
         donutChart.update();
 
