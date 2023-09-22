@@ -128,7 +128,7 @@ $(document).ready(function () {
         data: {
             labels: ['Allocated Memory', 'Free Memory'],
             datasets: [{
-                data: [12, 19],
+                data: [50,100],
                 backgroundColor: [
                     '#f22432',
                     '#34eb4f'
@@ -192,7 +192,9 @@ $(document).ready(function () {
         humidity_config.data.datasets[0].value.fill(data.bme_280_humidity);
         gaugeChart.update();
 
-        memory_config.data.datasets[0].data.fill(data.picow_mem_alloc_bytes);
+        //string_array = [data.picow_mem_alloc_bytes, data.picow_mem_free_bytes]
+        memory_config.data.datasets[0].data.fill(data.picow_mem_alloc_bytes)
+        memory_config.data.datasets[0].data.fill(data.picow_mem_free_bytes,1)
         donutChart.update();
 
         $('#picow_local_ip').text(data.picow_local_ip)
