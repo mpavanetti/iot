@@ -122,15 +122,43 @@ $(document).ready(function () {
           },
         }
       }
+
+    memory_config = {
+        type: 'doughnut',
+        data: {
+            labels: ['Allocated Memory', 'Free Memory'],
+            datasets: [{
+                data: [12, 19],
+                backgroundColor: [
+                    '#f22432',
+                    '#34eb4f'
+                ],
+                borderColor: [
+                    '#e81725',
+                    '#2abd3f'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            legend: {
+                display: false
+            },
+            tooltips: {
+                enabled: true,
+              },
+        }
+    }
     
     const context = document.getElementById('temperature_canvas').getContext('2d');
     const pressure_context = document.getElementById('pressure_canvas').getContext('2d');
+    const humidity_context = document.getElementById('humidity_canvas').getContext('2d');
+    const memory_context = document.getElementById('memory_canvas').getContext('2d');
     
     const lineChart = new Chart(context, temperature_config);
     const lineChart2 = new Chart(pressure_context, pressure_config);
-
-    const humidity_context = document.getElementById('humidity_canvas').getContext('2d');
     const gaugeChart = new Chart(humidity_context, humidity_config);
+    const donutChart = new Chart(memory_context, memory_config);
     
     const source = new EventSource("/picow-stream-data");
       
@@ -138,6 +166,8 @@ $(document).ready(function () {
     
     source.onmessage = function (event) {
         const data = JSON.parse(event.data);
+        $('#live').show()
+        
        //console.log(data)
         if (temperature_config.data.labels.length === 30) {
                 temperature_config.data.labels.shift();
@@ -161,6 +191,14 @@ $(document).ready(function () {
 
         humidity_config.data.datasets[0].value.fill(data.bme_280_humidity);
         gaugeChart.update();
+
+        memory_config.data.datasets[0].data.fill(data.picow_mem_alloc_bytes);
+        donutChart.update();
+
+        $('#picow_local_ip').text(data.picow_local_ip)
+        $('#picow_free_storage_kb').text(data.picow_free_storage_kb)
+        $('#picow_free_cpu_freq_mhz').text(data.picow_free_cpu_freq_mhz)
+
     }
     
     });

@@ -2,30 +2,41 @@
 
 {% block content %}
 <link rel="stylesheet" href="{{ url_for('static', filename= 'css/chart.min.css') }}"/>
+<div class="row">
+  <h1>Streaming <span id="live" class="badge bg-primary" style="font-size: 10px; display: none;" title="Refreshing data in 5 seconds interval.">Live</span></h1>
+</div>
 
   <div class="container text-center py-4 px-3 mx-auto">
     <div class="row">
-      <div class="col-md-4">
+      <div class="col-md-4 col-sm-12 col-12">
         <div class="card" style="width: 18rem;">
             <div class="card-body">
-              <h5 class="card-title">Streamed Messages</h5>
-              <p class="card-text">Some quick example text</p>
+              <h5 class="card-title">Pico W Status</h5>
+              <p class="card-text">
+                Address: <span id="picow_local_ip"></span>
+              </p>
+              <p>
+                Free Storage: <span id="picow_free_storage_kb"></span> Kb
+              </p>
+              <p>
+                CPU Freq: <span id="picow_free_cpu_freq_mhz"></span> Mhz
+              </p>
             </div>
           </div>
       </div>
-      <div class="col-md-4">
+      <div class="col-md-4 col-sm-12 col-12">
         <div class="card" style="width: 18rem;">
             <div class="card-body">
-              <h5 class="card-title">Operations</h5>
-              <p class="card-text">Some quick example text</p>
+              <h5 class="card-title">Memory Allocation</h5>
+              <canvas id="memory_canvas" style="width: 600px;"></canvas>
             </div>
           </div>
       </div>
-      <div class="col-md-4">
+      <div class="col-md-4 col-sm-12 col-12">
         <div class="card" style="width: 18rem;">
             <div class="card-body">
               <h5 class="card-title">BME 280 Humidity</h5>
-              <canvas id="humidity_canvas"></canvas>
+              <canvas id="humidity_canvas" style="width: 600px;"></canvas>
             </div>
           </div>
       </div>
@@ -34,7 +45,7 @@
     <hr class="py-2">
 
     <div class="row">
-      <div class="col-md-12">
+      <div class="col-md-12 col-sm-12 col-12">
         <div class="card">
           <div class="card-body">
               <canvas id="temperature_canvas"></canvas>
@@ -44,7 +55,7 @@
     </div>
 
     <div class="row py-4">
-      <div class="col-md-12">
+      <div class="col-md-12 col-sm-12 col-12">
         <div class="card">
           <div class="card-body">
               <canvas id="pressure_canvas"></canvas>
