@@ -95,14 +95,46 @@ $(document).ready(function () {
             }
         }
     };
+
+    const humidity_config = {
+        type: 'gauge',
+        data: {
+          //labels: ['Success', 'Warning', 'Warning', 'Error'],
+          datasets: [{
+            label: "BME 280 Humidity",
+            data: [10,20,30,50],
+            value: [0],
+            backgroundColor: ['red', 'orange', 'yellow', 'green'],
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          needle: {
+            // Needle circle radius as the percentage of the chart area width
+            radiusPercentage: 2,
+            // Needle width as the percentage of the chart area width
+            widthPercentage: 3.2,
+            // Needle length as the percentage of the interval between inner radius (0%) and outer radius (100%) of the arc
+            lengthPercentage: 80,
+            // The color of the needle
+            color: 'rgba(0, 0, 0, 1)'
+          },
+        }
+      }
     
     const context = document.getElementById('temperature_canvas').getContext('2d');
     const pressure_context = document.getElementById('pressure_canvas').getContext('2d');
     
     const lineChart = new Chart(context, temperature_config);
     const lineChart2 = new Chart(pressure_context, pressure_config);
+
+    const humidity_context = document.getElementById('humidity_canvas').getContext('2d');
+    const gaugeChart = new Chart(humidity_context, humidity_config);
     
     const source = new EventSource("/picow-stream-data");
+      
+        
     
     source.onmessage = function (event) {
         const data = JSON.parse(event.data);
@@ -126,6 +158,9 @@ $(document).ready(function () {
         pressure_config.data.labels.push(data.time);
         pressure_config.data.datasets[0].data.push(data.bme_280_pressure);
         lineChart2.update();
+
+        humidity_config.data.datasets[0].value.fill(data.bme_280_humidity);
+        gaugeChart.update();
     }
     
     });

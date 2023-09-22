@@ -24,17 +24,17 @@
       <div class="col-md-4">
         <div class="card" style="width: 18rem;">
             <div class="card-body">
-              <h5 class="card-title">Operations</h5>
-              <p class="card-text">Some quick example text</p>
+              <h5 class="card-title">BME 280 Humidity</h5>
+              <canvas id="humidity_canvas"></canvas>
             </div>
           </div>
       </div>
     </div>
 
-    <hr class="py-2 px-2">
+    <hr class="py-2">
 
     <div class="row">
-      <div class="col">
+      <div class="col-md-12">
         <div class="card">
           <div class="card-body">
               <canvas id="temperature_canvas"></canvas>
@@ -44,7 +44,7 @@
     </div>
 
     <div class="row py-4">
-      <div class="col">
+      <div class="col-md-12">
         <div class="card">
           <div class="card-body">
               <canvas id="pressure_canvas"></canvas>
@@ -56,6 +56,7 @@
   </div>
 
 <script src="{{ url_for('static', filename= 'js/chart.min.js') }}"></script>
+<script src="{{ url_for('static', filename= 'js/chart-js-gauge.js') }}"></script>
 <script src="{{ url_for('static', filename= 'js/streaming.js') }}"></script>
   
 {% endblock %}
