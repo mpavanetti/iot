@@ -51,7 +51,7 @@ def hardware():
 def streaming():
     return render_template("streaming.html")
 
-@app.route("/bme-280-temperature")
+@app.route("/picow-stream-data")
 def bme_280_temperature() -> Response:
     streaming = Streaming()
     streaming.kafka_connect("iot_source", kafka_broker_list)

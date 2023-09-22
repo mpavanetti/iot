@@ -38,7 +38,8 @@ class Streaming:
                 json_data = json.dumps(
                     {
                         "time": data["bme280"]["read_datetime"],
-                        "value": float(data["bme280"]["temperature"].replace("C", "")),
+                        "bme_280_temperature": float(data["bme280"]["temperature"].replace("C", "")),
+                        "picow_temperature": float(data["picow"]["temperature"])
                     }
                 )
 
