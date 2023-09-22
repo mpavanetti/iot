@@ -6,6 +6,9 @@ from machine import ADC, Pin, I2C
 from bme280 import BME280
 import rp2
 import binascii
+import picozero
+import ntptime
+
 
 # Wifi, can be overwriten
 wifi_sid = "raspberry"
@@ -37,6 +40,7 @@ class Data:
     def __enter__(self):
         Pin("LED", Pin.OUT).on()
         self.wifi_connect()
+        ntptime.settime()
         print("Press the button 1 to start streaming. and button 2 to stop.")
         return self
 
@@ -87,9 +91,7 @@ class Data:
               print(i+1, w[0].decode(), binascii.hexlify(w[1]).decode(), w[2], w[3], w[4], w[5])
 
     def get_board_temperature(self) -> float:
-        adc = ADC(4)
-        ADC_voltage = adc.read_u16() * (3.3 / (65536))
-        return 27 - (ADC_voltage - 0.706) / 0.001721
+        return picozero.pico_temp_sensor.temp
 
     def read_bme280(self):
         temp, press, hum = self.bme.values
