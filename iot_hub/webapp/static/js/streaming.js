@@ -107,10 +107,21 @@ $(document).ready(function () {
     source.onmessage = function (event) {
         const data = JSON.parse(event.data);
        //console.log(data)
+        if (temperature_config.data.labels.length === 30) {
+                temperature_config.data.labels.shift();
+                temperature_config.data.datasets[0].data.shift();
+                temperature_config.data.datasets[1].data.shift();
+            }
+
         temperature_config.data.labels.push(data.time);
         temperature_config.data.datasets[0].data.push(data.bme_280_temperature);
         temperature_config.data.datasets[1].data.push(data.picow_temperature);
         lineChart.update();
+
+        if (pressure_config.data.labels.length === 30) {
+            pressure_config.data.labels.shift();
+            pressure_config.data.datasets[0].data.shift();
+        }
 
         pressure_config.data.labels.push(data.time);
         pressure_config.data.datasets[0].data.push(data.bme_280_pressure);
