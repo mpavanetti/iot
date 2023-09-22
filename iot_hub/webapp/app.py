@@ -12,11 +12,9 @@ app = Flask(__name__)
 def routing():
     return redirect("/home")
 
-
 @app.route("/home")
 def home():
     return render_template("home.html")
-
 
 @app.route("/api/check_host_status")
 def host_status():
@@ -29,7 +27,6 @@ def host_status():
     }
     return dataset
 
-
 @app.route("/api/load_host_hardware")
 def host_hardware():
     hardware = Hardware()
@@ -39,7 +36,6 @@ def host_hardware():
         "disk_usage": hardware.get_disk_usage(),
     }
     return dataset
-
 
 @app.route("/hardware")
 def hardware():
@@ -51,11 +47,9 @@ def hardware():
         python=hardware.get_all_python(),
     )
 
-
 @app.route("/streaming")
 def streaming():
     return render_template("streaming.html")
-
 
 @app.route("/chart-data")
 def chart_data() -> Response:
