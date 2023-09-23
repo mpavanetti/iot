@@ -59,7 +59,7 @@
               {%- for key, value in hosts.items() %}
               <tr>
                 <td>{{ value["description"] }}</td>
-                <td>{{ value["ip"] }}</td>
+                <td id="{{ key }}_ip"></td>
                 <td id="{{ key }}"></td>
               </tr>
               {%- endfor %}

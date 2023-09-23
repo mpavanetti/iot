@@ -45,6 +45,7 @@ function check_host_status() {
             },
     }).done(function(data) {
             $.each(data, function(index, value) {
+                $(`#${index}_ip`).text(value.ip)
                 if(value.alive == true) {
                     $(`#${index}`).append(`<span class="badge bg-success destroy">ONLINE</span>`)
                 } else {
