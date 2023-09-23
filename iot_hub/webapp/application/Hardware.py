@@ -8,14 +8,26 @@ import sys
 import pkg_resources
 import psutil
 from datetime import datetime
-import os
 import subprocess
+from kafka import KafkaConsumer
+from json import loads
 
 
 class Hardware:
     def __init__(self):
         self.hostname = socket.getfqdn()
-        self.picow_ip = "192.158.50.1"
+
+    def get_picow_ip(self, topic: str, servers: list):
+        consumer = KafkaConsumer(
+            topic, bootstrap_servers=servers, auto_offset_reset="latest", group_id=None
+        )
+        for msg in consumer:
+            data = loads(msg.value.decode("utf-8"))
+            ip = data["picow"]["local_ip"]
+            break
+
+        consumer.close()
+        return ip
 
     def check_port(self, host, port):
         a_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
