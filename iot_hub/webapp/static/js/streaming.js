@@ -160,47 +160,61 @@ $(document).ready(function () {
     const gaugeChart = new Chart(humidity_context, humidity_config);
     const donutChart = new Chart(memory_context, memory_config);
     
-    const source = new EventSource("/picow-stream-data");
+    
       
         
-    
-    source.onmessage = function (event) {
-        const data = JSON.parse(event.data);
-        $('#live').show()
+    try {
+        const source = new EventSource("/picow-stream-data");
         
-       //console.log(data)
-        if (temperature_config.data.labels.length === 30) {
-                temperature_config.data.labels.shift();
-                temperature_config.data.datasets[0].data.shift();
-                temperature_config.data.datasets[1].data.shift();
+        source.onmessage = function (event) {
+            const data = JSON.parse(event.data);
+            
+            if(data == 'NoBrokersAvailable') {
+                console.log(data)
+                $('#kafka_offline').show()
+                source.close()
+                throw new Error('NoBrokersAvailable');
             }
 
-        temperature_config.data.labels.push(data.time);
-        temperature_config.data.datasets[0].data.push(data.bme_280_temperature);
-        temperature_config.data.datasets[1].data.push(data.picow_temperature);
-        lineChart.update();
+            $('#live').show()
+            
+        //console.log(data)
+            if (temperature_config.data.labels.length === 30) {
+                    temperature_config.data.labels.shift();
+                    temperature_config.data.datasets[0].data.shift();
+                    temperature_config.data.datasets[1].data.shift();
+                }
 
-        if (pressure_config.data.labels.length === 30) {
-            pressure_config.data.labels.shift();
-            pressure_config.data.datasets[0].data.shift();
+            temperature_config.data.labels.push(data.time);
+            temperature_config.data.datasets[0].data.push(data.bme_280_temperature);
+            temperature_config.data.datasets[1].data.push(data.picow_temperature);
+            lineChart.update();
+
+            if (pressure_config.data.labels.length === 30) {
+                pressure_config.data.labels.shift();
+                pressure_config.data.datasets[0].data.shift();
+            }
+
+            pressure_config.data.labels.push(data.time);
+            pressure_config.data.datasets[0].data.push(data.bme_280_pressure);
+            lineChart2.update();
+
+            humidity_config.data.datasets[0].value.fill(data.bme_280_humidity);
+            gaugeChart.update();
+
+            //string_array = [data.picow_mem_alloc_bytes, data.picow_mem_free_bytes]
+            memory_config.data.datasets[0].data.fill(data.picow_mem_alloc_bytes,0)
+            memory_config.data.datasets[0].data.fill(data.picow_mem_free_bytes,1)
+            donutChart.update();
+
+            $('#picow_local_ip').text(data.picow_local_ip)
+            $('#picow_free_storage_kb').text(data.picow_free_storage_kb)
+            $('#picow_free_cpu_freq_mhz').text(data.picow_free_cpu_freq_mhz)
         }
-
-        pressure_config.data.labels.push(data.time);
-        pressure_config.data.datasets[0].data.push(data.bme_280_pressure);
-        lineChart2.update();
-
-        humidity_config.data.datasets[0].value.fill(data.bme_280_humidity);
-        gaugeChart.update();
-
-        //string_array = [data.picow_mem_alloc_bytes, data.picow_mem_free_bytes]
-        memory_config.data.datasets[0].data.fill(data.picow_mem_alloc_bytes,0)
-        memory_config.data.datasets[0].data.fill(data.picow_mem_free_bytes,1)
-        donutChart.update();
-
-        $('#picow_local_ip').text(data.picow_local_ip)
-        $('#picow_free_storage_kb').text(data.picow_free_storage_kb)
-        $('#picow_free_cpu_freq_mhz').text(data.picow_free_cpu_freq_mhz)
-
-    }
+    } catch (e) {
+        console.error(e);
+        // Expected output: Error: Parameter is not a number!
+      }
+    
     
     });

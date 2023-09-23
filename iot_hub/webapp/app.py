@@ -1,6 +1,7 @@
 from flask import Flask, render_template, redirect, Response, stream_with_context
 from application.Hardware import Hardware
 from application.Streaming import Streaming
+import json
 
 # Generic Variables
 localhost = "127.0.0.1"
@@ -98,14 +99,21 @@ def streaming():
 @app.route("/picow-stream-data")
 def bme_280_temperature() -> Response:
     streaming = Streaming()
-    streaming.kafka_connect("iot_source", kafka_broker_list)
-    response = Response(
-        stream_with_context(streaming.iterate_kafka_data()),
-        mimetype="text/event-stream",
-    )
-    response.headers["Cache-Control"] = "no-cache"
-    response.headers["X-Accel-Buffering"] = "no"
-    return response
+    if streaming.kafka_connect("iot_source", kafka_broker_list):
+        response = Response(
+            stream_with_context(streaming.iterate_kafka_data()),
+            mimetype="text/event-stream",
+        )
+        response.headers["Cache-Control"] = "no-cache"
+        response.headers["X-Accel-Buffering"] = "no"
+        return response
+    else:
+        json_data = json.dumps("NoBrokersAvailable")
+        response = Response(
+            stream_with_context((f"data:{json_data}\n\n")),
+            mimetype="text/event-stream",
+        )
+        return response
 
 
 if __name__ == "__main__":
