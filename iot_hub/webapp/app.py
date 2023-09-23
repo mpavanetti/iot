@@ -14,7 +14,7 @@ services = {
     "ssh": {"description": "SSH Server", "port": 22},
     "rasap": {"description": "Raspberry Pi Access Point", "port": 8005},
     "mariadb": {"description": "MariaDB Database", "port": 3306},
-    "jupyerlab": {"description": "Jupyer Notebook Lab", "port": 8888},
+    "jupyerlab": {"description": "Jupyter Notebook Lab", "port": 8888},
     "sparkui": {"description": "Spark UI", "port": 4040},
     "sparkmasterui": {"description": "Spark Master UI", "port": 8080},
     "sparkmaster": {"description": "Spark Master", "port": 7077},
