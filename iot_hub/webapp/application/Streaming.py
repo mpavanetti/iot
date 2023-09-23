@@ -1,4 +1,4 @@
-from kafka import KafkaConsumer
+from kafka import KafkaConsumer, errors
 from typing import Iterator
 from flask import request
 import logging
@@ -19,10 +19,16 @@ class Streaming:
         pass
 
     def kafka_connect(self, topic: str, servers: list):
-        consumer = KafkaConsumer(
-            topic, bootstrap_servers=servers, auto_offset_reset="latest", group_id=None
-        )
-        self.consumer = consumer
+        try:
+            consumer = KafkaConsumer(
+                topic, bootstrap_servers=servers, auto_offset_reset="latest", group_id=None
+            )
+            self.consumer = consumer
+            return True
+        except errors.NoBrokersAvailable as e:
+            print(f"[*] No Kafka Brokers Available.\n{e}")
+            return False
+        
 
     def iterate_kafka_data(self) -> Iterator[str]:
         if request.headers.getlist("X-Forwarded-For"):

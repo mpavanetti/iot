@@ -3,7 +3,10 @@
 {% block content %}
 <link rel="stylesheet" href="{{ url_for('static', filename= 'css/chart.min.css') }}"/>
 <div class="row">
-  <h1>Streaming <span id="live" class="badge bg-primary" style="font-size: 10px; display: none;" title="Refreshing data in 5 seconds interval.">Live</span></h1>
+  <h1>Streaming 
+    <span id="kafka_offline" class="badge bg-danger" style="font-size: 20px; display: none;" title="Kafka broker was not found. make sure the hostname is correct and online">No Kafka Broker has been found. (Offline)</span>
+    <span id="live" class="badge bg-primary" style="font-size: 10px; display: none;" title="Refreshing data in 5 seconds interval.">Live</span>
+  </h1>
 </div>
 
   <div class="container text-center py-4 px-3 mx-auto">

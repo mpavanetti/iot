@@ -9,7 +9,7 @@ import pkg_resources
 import psutil
 from datetime import datetime
 import subprocess
-from kafka import KafkaConsumer
+from kafka import KafkaConsumer, errors
 from json import loads
 
 
@@ -18,16 +18,24 @@ class Hardware:
         self.hostname = socket.getfqdn()
 
     def get_picow_ip(self, topic: str, servers: list):
-        consumer = KafkaConsumer(
-            topic, bootstrap_servers=servers, auto_offset_reset="latest", group_id=None
-        )
-        for msg in consumer:
-            data = loads(msg.value.decode("utf-8"))
-            ip = data["picow"]["local_ip"]
-            break
+        try:
+            consumer = KafkaConsumer(
+                topic, bootstrap_servers=servers, auto_offset_reset="latest", group_id=None
+            )
+            for msg in consumer:
+                data = loads(msg.value.decode("utf-8"))
+                ip = data["picow"]["local_ip"]
+                break
 
-        consumer.close()
-        return ip
+            consumer.close()
+            return ip
+        except errors.NoBrokersAvailable as e:
+            print(f"[*] No Kafka Brokers Available.\n{e}")
+            consumer.close()
+            return "Unknown"
+        except:
+            consumer.close()
+            return "Unknown"
 
     def check_port(self, host, port):
         a_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
