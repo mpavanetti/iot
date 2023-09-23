@@ -23,6 +23,12 @@ services = {
     "kafkaexternal": {"description": "Kafka Broker (External)", "port": 29092},
     "pythonsocket": {"description": "Python Socket Agent", "port": 1500},
 }
+hosts = {
+    "rasp4": {"ip": "", "alive": "", "description": "Raspberry Pi 4"},
+    "picow": {"ip": "", "alive": "", "description": "Raspberry Pi Pico W"},
+    "localhost": {"ip": localhost, "alive": "", "description": "localhost"},
+    "Test": {"ip": "192.168.1.40", "alive": "", "description": "Test"},
+}
 
 app = Flask(__name__)
 
@@ -34,7 +40,7 @@ def routing():
 
 @app.route("/home")
 def home():
-    return render_template("home.html", services=services)
+    return render_template("home.html", services=services, hosts=hosts)
 
 
 @app.route("/api/check_ports")
@@ -49,13 +55,17 @@ def check_ports():
 @app.route("/api/check_host_status")
 def host_status():
     hardware = Hardware()
-    dataset = {
-        "local_ip": hardware.get_local_ip(),
-        "picow_ip": hardware.picow_ip,
-        "local_alive": hardware.check_if_host_alive(hardware.get_local_ip()),
-        "picow_alive": hardware.check_if_host_alive(hardware.picow_ip),
-    }
-    return dataset
+
+    data = hosts.copy()
+    data["rasp4"]["ip"] = hardware.get_local_ip()
+    data["picow"]["ip"] = hardware.get_picow_ip(
+        topic="iot_source", servers=kafka_broker_list
+    )
+
+    for key, value in data.items():
+        value["alive"] = hardware.check_if_host_alive(value["ip"])
+
+    return data
 
 
 @app.route("/api/load_host_hardware")

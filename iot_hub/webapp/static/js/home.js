@@ -44,20 +44,13 @@ function check_host_status() {
                 $('.destroy').remove()
             },
     }).done(function(data) {
-            // Network Status
-            $("#local_ip").append(`<span class='destroy'>${data.local_ip}</span>`);
-            if(data.local_alive == true) {
-                $("#local_alive").append(`<span class="badge bg-success destroy">ONLINE</span>`)
-            } else {
-                $("#local_alive").append(`<span class="badge bg-danger destroy">OFFLINE</span>`)
-            }
-            $("#picow_ip").append(`<span class='destroy'>${data.picow_ip}</span>`);
-            if(data.picow_alive == true) {
-                $("#picow_alive").append(`<span class="badge bg-success destroy">ONLINE</span>`)
-            } else {
-                $("#picow_alive").append(`<span class="badge bg-danger destroy">OFFLINE</span>`)
-            }
-
+            $.each(data, function(index, value) {
+                if(value.alive == true) {
+                    $(`#${index}`).append(`<span class="badge bg-success destroy">ONLINE</span>`)
+                } else {
+                    $(`#${index}`).append(`<span class="badge bg-danger destroy">OFFLINE</span>`)
+                }
+            });
             $('.spinner-border').hide()    
     });
 }
