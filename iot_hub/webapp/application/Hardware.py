@@ -31,10 +31,8 @@ class Hardware:
             return ip
         except errors.NoBrokersAvailable as e:
             print(f"[*] No Kafka Brokers Available.\n{e}")
-            consumer.close()
             return "Unknown"
         except:
-            consumer.close()
             return "Unknown"
 
     def check_port(self, host, port):
