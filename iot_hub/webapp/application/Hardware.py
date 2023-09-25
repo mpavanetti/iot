@@ -9,13 +9,22 @@ import pkg_resources
 import psutil
 from datetime import datetime
 import subprocess
-from kafka import KafkaConsumer, errors
+from kafka import KafkaConsumer, errors, KafkaAdminClient
 from json import loads
 
 
 class Hardware:
     def __init__(self):
         self.hostname = socket.getfqdn()
+
+    def kafka_client(self, servers):
+        try:
+            client = KafkaAdminClient(bootstrap_servers=servers)
+            return client
+
+        except errors.NoBrokersAvailable as e:
+            print(f"[*] No Kafka Brokers Available.\n{e}")
+        
 
     def get_picow_ip(self, topic: str, servers: list):
         try:
