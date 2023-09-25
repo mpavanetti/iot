@@ -80,6 +80,19 @@ def host_hardware():
     return dataset
 
 
+@app.route("/api/kafka_info")
+def kafka_info():
+    hardware = Hardware()
+    kafka = hardware.kafka_client(servers=kafka_broker_list)
+    dataset = {
+        "topics": kafka.list_topics(),
+        "consumer_groups": kafka.list_consumer_groups(),
+        "describe_topics": kafka.describe_topics(),
+        "describe_cluster": kafka.describe_cluster(),
+    }
+    kafka.close()
+    return dataset
+
 @app.route("/hardware")
 def hardware():
     hardware = Hardware()
