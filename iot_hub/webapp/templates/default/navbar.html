@@ -50,23 +50,23 @@
           id="submenu2"
           data-bs-parent="#menu">
           <li class="w-100">
-            <a href="http://localhost:8888/" class="nav-link px-0">
+            <a id="jupyter_link" class="nav-link px-0" target="_blank">
               <span class="d-none d-sm-inline">Jupyter</span> Lab</a>
           </li>
           <li>
-            <a href="http://localhost:8080/" class="nav-link px-0">
+            <a id="sparkmaster_link" class="nav-link px-0" target="_blank">
               <span class="d-none d-sm-inline">Spark</span> Master</a>
           </li>
           <li>
-            <a href="http://localhost:8081/" class="nav-link px-0">
+            <a id="sparkworker1_link"  class="nav-link px-0" target="_blank">
               <span class="d-none d-sm-inline">Spark</span> Worker 1</a>
           </li>
           <li>
-            <a href="http://localhost:8082/" class="nav-link px-0">
+            <a id="sparkworker2_link" class="nav-link px-0" target="_blank">
               <span class="d-none d-sm-inline">Spark</span> Worker 2</a>
           </li>
           <li>
-            <a href="http://localhost:8085/" class="nav-link px-0">
+            <a id="ap_link" class="nav-link px-0" target="_blank">
               <span class="d-none d-sm-inline">Access</span> Point</a>
           </li>
         </ul>
@@ -100,3 +100,11 @@
     </div>
   </div>
 </div>
+
+<script>
+  document.getElementById("jupyter_link").href =  'http://'+document.location.hostname+':8888';
+  document.getElementById("sparkmaster_link").href =  'http://'+document.location.hostname+':8080';
+  document.getElementById("sparkworker1_link").href =  'http://'+document.location.hostname+':8081';
+  document.getElementById("sparkworker2_link").href =  'http://'+document.location.hostname+':8082';
+  document.getElementById("ap_link").href =  'http://'+document.location.hostname+':8005';
+</script>
