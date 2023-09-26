@@ -8,7 +8,8 @@ localhost = "127.0.0.1"
 kafka_broker_list = [f"{localhost}:29092"]
 services = {
     "iotcenter": {"description": "IoT Center", "port": 8001},
-    "vnc": {"description": "VNC Server", "port": 5900},
+    "vnc": {"description": "VNC Server (raspberrypi:1)", "port": 5901},
+    "vnc2": {"description": "VNC Server (raspberrypi:2)", "port": 5902},
     "ftp": {"description": "FTP Server", "port": 21},
     "sftp": {"description": "SFTP Server", "port": 22},
     "ssh": {"description": "SSH Server", "port": 22},
