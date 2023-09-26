@@ -4,7 +4,7 @@ from application.Streaming import Streaming
 import json
 
 # Generic Variables
-localhost = "127.0.0.1"
+localhost = "raspberrypi.local"
 kafka_broker_list = [f"{localhost}:29092"]
 services = {
     "iotcenter": {"description": "IoT Center", "port": 8001},
