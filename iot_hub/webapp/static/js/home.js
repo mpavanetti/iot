@@ -1,4 +1,24 @@
 // Function for loading infrastructure services status.
+function check_kafka() {
+    
+    // api call 
+    $.ajax({
+        url: "/api/kafka_info",
+        context: document.body,
+    }).done(function(data) {
+        $.each(data.describe_topics, function(index, value) {
+            $(`#kafka_cluster`).append(`
+                <tr>
+                    <td>${value.topic}</td>
+                    <td>${((value.error_code == 0) ? 'Good' : 'Bad') }</td>
+                  </tr>
+            `)
+
+        });
+    });
+}
+
+// Function for loading infrastructure services status.
 function check_infrastructure() {
 
     // loop 1 minute
@@ -9,8 +29,6 @@ function check_infrastructure() {
         url: "/api/check_ports",
         context: document.body,
         beforeSend : function(){
-                // Show image container
-                $('.spinner-border2').show()
                 $('.destroy2').remove()
             },
     }).done(function(data) {
@@ -22,9 +40,7 @@ function check_infrastructure() {
             } else {
                 $(`#${index}`).append(`<span class="badge bg-danger destroy2">OFFLINE</span>`)
             }
-        });
-
-        $('.spinner-border').hide()    
+        }); 
     });
 }
 
@@ -79,7 +95,9 @@ $( document ).ready(function() {
     console.log( "home.js loaded !" );
 
     check_infrastructure()
+    check_kafka()
     load_host_hardware()
     check_host_status()
+    
 
 });
