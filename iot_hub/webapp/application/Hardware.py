@@ -11,11 +11,44 @@ from datetime import datetime
 import subprocess
 from kafka import KafkaConsumer, errors, KafkaAdminClient
 from json import loads
+import docker
 
 
 class Hardware:
     def __init__(self):
         self.hostname = socket.getfqdn()
+
+    def get_docker_containers(self):
+        try:
+            client = docker.from_env()
+            container_list = client.containers.list()
+
+            data = [
+                {
+                    "id": container.short_id,
+                    "name": container.attrs["Name"],
+                    "status": container.status,
+                    "image": container.attrs['Config']['Image'],
+                    "entrypoint": container.attrs['Config']['Entrypoint'],
+                    "exit_code": container.attrs["State"]["ExitCode"],
+                    "created_at": container.attrs["Created"],
+                    "error": container.attrs["State"]["Error"],
+                    "StartedAt": container.attrs["State"]["StartedAt"],
+                    "FinishedAt": container.attrs["State"]["FinishedAt"],
+                    "ports": ",".join(
+                        [
+                            key.replace("/tcp", "")
+                            for key in container.attrs["Config"]["ExposedPorts"].keys()
+                        ]
+                    ),
+                }
+                for container in container_list
+            ]
+
+            client.close()
+            return data
+        except Exception as e:
+            print(f"[*] Error while fetching docker info.\n{e}")
 
     def kafka_client(self, servers):
         try:

@@ -27,8 +27,6 @@ services = {
 hosts = {
     "rasp4": {"ip": "", "alive": "", "description": "Raspberry Pi 4"},
     "picow": {"ip": "", "alive": "", "description": "Raspberry Pi Pico W"},
-    "localhost": {"ip": localhost, "alive": "", "description": "localhost"},
-    "Test": {"ip": "192.168.1.40", "alive": "", "description": "Test"},
 }
 
 app = Flask(__name__)
@@ -43,6 +41,10 @@ def routing():
 def home():
     return render_template("home.html", services=services, hosts=hosts)
 
+@app.route("/api/docker_info")
+def docker_info():
+    hardware = Hardware()
+    return hardware.get_docker_containers()
 
 @app.route("/api/check_ports")
 def check_ports():

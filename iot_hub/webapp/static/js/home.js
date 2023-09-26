@@ -1,4 +1,32 @@
 // Function for loading infrastructure services status.
+function check_docker() {
+
+    // loop 1 minute
+    setTimeout(check_docker,60000);
+    
+    // api call 
+    $.ajax({
+        url: "/api/docker_info",
+        context: document.body,
+        beforeSend : function(){
+            $('.destroy3').remove()
+        },
+    }).done(function(data) {
+        $('#refresh2').show()
+        $.each(data, function(index, value) {
+            $(`#docker`).append(`
+                <tr>
+                    <td class="destroy3">${value.name}</td>
+                    <td class="destroy3">${value.ports}</td>
+                    <td class="destroy3">${value.status}</td>
+                </tr>
+            `)
+
+        });
+    });
+}
+
+// Function for loading infrastructure services status.
 function check_kafka() {
     
     // api call 
@@ -11,7 +39,7 @@ function check_kafka() {
                 <tr>
                     <td>${value.topic}</td>
                     <td>${((value.error_code == 0) ? 'Good' : 'Bad') }</td>
-                  </tr>
+                </tr>
             `)
 
         });
@@ -98,6 +126,7 @@ $( document ).ready(function() {
     check_kafka()
     load_host_hardware()
     check_host_status()
+    check_docker()
     
 
 });
