@@ -45,13 +45,16 @@ class Streaming:
                     {
                         "time": data["bme280"]["read_datetime"],
                         "bme_280_temperature": float(
-                            data["bme280"]["temperature"].replace("C", "")
+                            data["bme280"]["temperature"]
                         ),
                         "bme_280_humidity": float(
-                            data["bme280"]["humidity"].replace("%", "")
+                            data["bme280"]["humidity"]
                         ),
                         "bme_280_pressure": float(
-                            data["bme280"]["pressure"].replace("hPa", "")
+                            data["bme280"]["pressure"]
+                        ),
+                        "bme_280_altitude": float(
+                            data["bme280"]["altitude"]
                         ),
                         "picow_temperature": float(data["picow"]["temperature"]),
                         "picow_mem_alloc_bytes": int(data["picow"]["mem_alloc_bytes"]),
