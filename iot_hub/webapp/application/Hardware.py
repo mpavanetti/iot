@@ -12,7 +12,8 @@ import subprocess
 from kafka import KafkaConsumer, errors, KafkaAdminClient
 from json import loads
 import docker
-
+from flask import make_response
+import json
 
 class Hardware:
     def __init__(self):
@@ -46,7 +47,9 @@ class Hardware:
             ]
 
             client.close()
-            return data
+            response = make_response(json.dumps(data), 200)
+            response.mimetype = 'application/json'
+            return response
         except Exception as e:
             print(f"[*] Error while fetching docker info.\n{e}")
 
