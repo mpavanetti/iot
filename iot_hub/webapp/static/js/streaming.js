@@ -131,11 +131,11 @@ $(document).ready(function () {
                 data: [50,100],
                 backgroundColor: [
                     '#D3D3D3',
-                    '#67f070'
+                    'green'
                 ],
                 borderColor: [
                     '#D3D3D3',
-                    '#67f070'
+                    'green'
                 ],
                 borderWidth: 1
             }]
