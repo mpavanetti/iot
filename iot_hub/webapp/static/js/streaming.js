@@ -130,12 +130,12 @@ $(document).ready(function () {
             datasets: [{
                 data: [50,100],
                 backgroundColor: [
-                    '#f22432',
-                    '#34eb4f'
+                    '#D3D3D3',
+                    '#67f070'
                 ],
                 borderColor: [
-                    '#e81725',
-                    '#2abd3f'
+                    '#D3D3D3',
+                    '#67f070'
                 ],
                 borderWidth: 1
             }]

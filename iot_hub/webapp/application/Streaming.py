@@ -54,8 +54,8 @@ class Streaming:
                             data["bme280"]["pressure"].replace("hPa", "")
                         ),
                         "picow_temperature": float(data["picow"]["temperature"]),
-                        "picow_mem_alloc_bytes": int(data["picow"]["mem_alloc_bytes"]),
-                        "picow_mem_free_bytes": int(data["picow"]["mem_free_bytes"]),
+                        "picow_mem_alloc_bytes": int(data["picow"]["mem_alloc_bytes"]) / 1024,
+                        "picow_mem_free_bytes": int(data["picow"]["mem_free_bytes"]) / 1024,
                         "picow_free_storage_kb": float(
                             data["picow"]["free_storage_kb"]
                         ),
