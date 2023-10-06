@@ -1,9 +1,9 @@
 # Generic Variables
-localhost = "raspberrypi.local"
-kafka_broker_list = [f"{localhost}:29092"]
+localhost = "127.0.0.1"
+kafka_broker_list = [f"kafka:9092"]
 
 services = {
-    "iotcenter": {"description": "IoT Center", "port": 8001},
+    "iotcenter": {"description": "IoT Center", "port": 80},
     "vnc": {"description": "VNC Server (raspberrypi:1)", "port": 5901},
     "vnc2": {"description": "VNC Server (raspberrypi:2)", "port": 5902},
     "ftp": {"description": "FTP Server", "port": 21},
