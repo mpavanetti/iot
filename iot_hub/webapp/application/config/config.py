@@ -1,6 +1,6 @@
 # Generic Variables
 localhost = "127.0.0.1"
-kafka_broker_list = [f"kafka:9092"]
+kafka_broker_list = [f"{localhost}:29092"]
 
 services = {
     "iotcenter": {"description": "IoT Center", "port": 80},
