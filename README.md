@@ -1,10 +1,9 @@
 # IOT Project
 
 
-## Instructions
-Download docker and docker compose on its latest version.
-  
-
+## Instructions IoT Center
+Download docker and docker compose on its latest version.  
+Run the following commands:
 ```
 git clone https://github.com/mpavanetti/iot.git
 cd iot
@@ -16,6 +15,43 @@ docker compose up -d
 docker compose --profile jupyter up -d
 ```
 
+In this case, I am using a raspberry pi 4 (8GB) as the IoT Center infrastructure host as matter of convinience.  
+However you can use and infrastructure (Linux Server) at your choice.  
+If you decide to use the raspberry pi 4 as me (optional), here are additional steps that I used to set it up.  
+[Instructions](iot_hub/infrastructure/README.md)  
+  
+  
+## Instructions IoT Source.
+I am using a raspberry pi pico w to interface with the IoT sensors (bme 280) in order to capture the data read by the sensors and send it through tcp/ip to the server.  
+1. Go to the oficial micropython download page at https://micropython.org/download/RPI_PICO_W/ 
+2. Download the latest .uf2 firmware
+3. Plug your raspberry pi pico w into your pc through the usb port.
+4. Once it is recognized as an external device, copy the recent .uf2 firmware file to the root of the device. it will reboot.
+5. Once it starts up again you won't be able to see it.
+6. Download an ide your choice, in my case I am using thonny https://thonny.org/ 
+7. If you are using thonny, go to tools manage packages and install the package micropython-bme280.
+8. Once you have installed the required library, upload to the raspberry pi pico w the files [data.py](iot_source/picow/data.py) and [main.py](iot_source/picow/main.py).
+9. Unplug it from your pc.
+10. Plug it into any 5V usb port.
+
+
+## Images
+Webapp home screen.  
+
+![home](img/home.jpg)  
+  
+Real time data steaming screen.  
+![stream](img/streaming.png)  
+  
+General Hardware Information screen.
+![hardware](img/hardware.jpg)  
+  
+Interactive Jupyter Lab and spark client.
+![jupyter](img/jupyter.jpg)  
+
+Spark Master with 1 spark worker running.
+![sparkmaster](img/sparkmaster.jpg)  
+  
 
 ## IOT Components
 
