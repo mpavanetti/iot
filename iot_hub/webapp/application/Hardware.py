@@ -29,18 +29,15 @@ class Hardware:
                     "id": container.short_id,
                     "name": container.attrs["Name"],
                     "status": container.status,
-                    "image": container.attrs['Config']['Image'],
-                    "entrypoint": container.attrs['Config']['Entrypoint'],
+                    "image": container.attrs["Config"]["Image"],
+                    "entrypoint": container.attrs["Config"]["Entrypoint"],
                     "exit_code": container.attrs["State"]["ExitCode"],
                     "created_at": container.attrs["Created"],
                     "error": container.attrs["State"]["Error"],
                     "StartedAt": container.attrs["State"]["StartedAt"],
                     "FinishedAt": container.attrs["State"]["FinishedAt"],
                     "ports": ",".join(
-                        [
-                            key.replace("/tcp", "")
-                            for key in container.attrs["Config"]["ExposedPorts"].keys()
-                        ]
+                        [port.replace("/tcp", "") for port in container.ports.keys()]
                     ),
                 }
                 for container in container_list
@@ -48,7 +45,7 @@ class Hardware:
 
             client.close()
             response = make_response(json.dumps(data), 200)
-            response.mimetype = 'application/json'
+            response.mimetype = "application/json"
             return response
         except Exception as e:
             print(f"[*] Error while fetching docker info.\n{e}")
@@ -60,12 +57,14 @@ class Hardware:
 
         except errors.NoBrokersAvailable as e:
             print(f"[*] No Kafka Brokers Available.\n{e}")
-        
 
     def get_picow_ip(self, topic: str, servers: list):
         try:
             consumer = KafkaConsumer(
-                topic, bootstrap_servers=servers, auto_offset_reset="latest", group_id=None
+                topic,
+                bootstrap_servers=servers,
+                auto_offset_reset="latest",
+                group_id=None,
             )
             for msg in consumer:
                 data = loads(msg.value.decode("utf-8"))

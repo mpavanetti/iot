@@ -125,16 +125,14 @@ services:
       - kafka
 
   flask-app:
+    hostname: flask-app
     build:
       context: ../webapp/.
-    ports:
-      - "80:80"
     restart: on-failure
-    networks:
-      - kafka-network
-      - spark-network
+    network_mode: host
     volumes:
       - "../webapp/:/python-docker"
+      - "/var/run/docker.sock:/var/run/docker.sock"
 
 networks:
   spark-network:
