@@ -1,6 +1,22 @@
 # IOT Project
 
 
+## Instructions
+Download docker and docker compose on its latest version.
+  
+
+```
+git clone https://github.com/mpavanetti/iot.git
+cd iot
+
+# Standard container configuration (No Jupyter Lab)
+docker compose up -d 
+
+# Containers plus jupyter Lab
+docker compose --profile jupyter up -d
+```
+
+
 ## IOT Components
 
 ### Raspberry Pi Pico W
