@@ -1,4 +1,4 @@
-version: '3'
+version: '3.9'
 
 services:
 
@@ -8,11 +8,11 @@ services:
       - '8888:8888'
       - '4040:4040'
     volumes:
-      - ./data:/home/jovyan/work/data:rw
-      - ./jars:/home/jovyan/work/jars:rw
-      - ./jobs:/home/jovyan/work/jobs:rw
-      - ./notebooks:/home/jovyan/work/notebooks
-      - ./scripts:/home/jovyan/work/scripts:rw
+      - ./iot_hub/infrastructure/data:/home/jovyan/work/data:rw
+      - ./iot_hub/infrastructure/jars:/home/jovyan/work/jars:rw
+      - ./iot_hub/infrastructure/jobs:/home/jovyan/work/jobs:rw
+      - ./iot_hub/infrastructure/notebooks:/home/jovyan/work/notebooks
+      - ./iot_hub/infrastructure/scripts:/home/jovyan/work/scripts:rw
     user: root
     environment:
       - GRANT_SUDO=yes
@@ -21,6 +21,8 @@ services:
     networks:
       - spark-network
     restart: on-failure
+    profiles:
+      - jupyter
 
   spark:
     image: docker.io/bitnami/spark:3.4.1
@@ -38,8 +40,8 @@ services:
       - spark-network
     restart: on-failure
     volumes:
-      - ./data:/home/jovyan/work/data:rw
-      - ./jars:/home/jovyan/work/jars:rw
+      - ./iot_hub/infrastructure/data:/home/jovyan/work/data:rw
+      - ./iot_hub/infrastructure/jars:/home/jovyan/work/jars:rw
     user: root
       
 
@@ -61,8 +63,8 @@ services:
     ports:
       - '8081:8081'
     volumes:
-      - ./data:/home/jovyan/work/data:rw
-      - ./jars:/home/jovyan/work/jars:rw
+      - ./iot_hub/infrastructure/data:/home/jovyan/work/data:rw
+      - ./iot_hub/infrastructure/jars:/home/jovyan/work/jars:rw
     user: root
 
   mariadb:
@@ -70,7 +72,7 @@ services:
     ports:
       - 3306:3306
     volumes:
-      - "./config/mariadb:/var/lib/mysql"
+      - "./iot_hub/infrastructure/config/mariadb:/var/lib/mysql"
     environment:
       - MYSQL_ROOT_PASSWORD=root
       - MYSQL_PASSWORD=mysql
@@ -110,7 +112,7 @@ services:
 
   python-socket:
     build:
-      context: .
+      context: ./iot_hub/infrastructure/.
     ports:
       - "1500:1500"
     environment:
@@ -127,11 +129,11 @@ services:
   flask-app:
     hostname: flask-app
     build:
-      context: ../webapp/.
+      context: ./iot_hub/webapp/.
     restart: on-failure
     network_mode: host
     volumes:
-      - "../webapp/:/python-docker"
+      - "./iot_hub/webapp/:/python-docker"
       - "/var/run/docker.sock:/var/run/docker.sock"
 
 networks:
