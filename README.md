@@ -11,7 +11,7 @@ cd iot
 # Standard container configuration (No Jupyter Lab)
 docker compose up -d 
 
-# Containers plus jupyter Lab
+# Containers plus jupyter Lab (Optional)
 docker compose --profile jupyter up -d
 ```
 
