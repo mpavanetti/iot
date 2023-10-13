@@ -11,23 +11,25 @@ packages = [
 ]
 
 jars = [
-    f"{path}/jars/commons-pool2-2.11.1.jar",
-    f"{path}/jars/spark-sql-kafka-0-10_2.12-3.4.1.jar",
-    f"{path}/jars/kafka-clients-3.5.1.jar",
-    f"{path}/jars/spark-token-provider-kafka-0-10_2.12-3.4.1.jar",
-    f"{path}/jars/mysql-connector-j-8.0.31.jar",
+    f"/home/jovyan/work/jars/commons-pool2-2.11.1.jar",
+    f"/home/jovyan/work/jars/spark-sql-kafka-0-10_2.12-3.4.1.jar",
+    f"/home/jovyan/work/jars/kafka-clients-3.5.1.jar",
+    f"/home/jovyan/work/jars/spark-token-provider-kafka-0-10_2.12-3.4.1.jar",
+    f"/home/jovyan/work/jars/mysql-connector-j-8.0.31.jar",
 ]
 
 spark = (SparkSession
          .Builder()
-         .appName(name="test_kafka")
+         .appName(name="process_iot_data")
          .master("spark://spark:7077")
          .config("spark.jars", ",".join(jars))
          .config("spark.jars.packages", ",".join(packages))
          .getOrCreate())
 
-logging.warn(f"[*] Spark Master at: spark://spark:7077")
-logging.warn(f"[*] Spark Cores: {spark.sparkContext.defaultParallelism}")
+spark.sparkContext.setLogLevel("WARN")
+
+logging.warning(f"[*] Spark Master at: spark://spark:7077")
+logging.warning(f"[*] Spark Cores: {spark.sparkContext.defaultParallelism}")
 
 schema = StructType([
     StructField("id", IntegerType()),
@@ -88,7 +90,7 @@ final_df = (stg_df
                 .orderBy(col("read_datetime").desc())
                 .where("id is not null")
            )
-logging.warn(f"Dataframe Records: {final_df.count()}")
+logging.warning(f"Dataframe Records: {final_df.count()}")
 
 from pyspark.sql.functions import count, avg, round, month,year, dayofmonth, min, max, hour, desc
 
@@ -161,7 +163,7 @@ agg_by_ip_df = (final_df
                 .selectExpr("picow_local_ip as source_ip", "messages")
                )
 
-logging.warn(f"Storing {agg_by_hour_df.count()} records at mariadb table agg_by_hour_df ...")
+logging.warning(f"Storing {agg_by_hour_df.count()} records at mariadb table agg_by_hour_df ...")
 
 (agg_by_hour_df.write 
         .format("jdbc") 
@@ -173,7 +175,7 @@ logging.warn(f"Storing {agg_by_hour_df.count()} records at mariadb table agg_by_
         .option("dbtable", "agg_by_hour_df") 
         .save())
 
-logging.warn(f"Storing {agg_by_ip_df.count()} records at mariadb table agg_by_ip_df ...")
+logging.warning(f"Storing {agg_by_ip_df.count()} records at mariadb table agg_by_ip_df ...")
 
 (agg_by_ip_df.write 
         .format("jdbc") 
@@ -185,12 +187,12 @@ logging.warn(f"Storing {agg_by_ip_df.count()} records at mariadb table agg_by_ip
         .option("dbtable", "agg_by_ip_df") 
         .save())
 
-logging.warn(f"Storing agg_by_hour_df csv file at {path}data/agg_by_hour_df.csv ...")
+logging.warning(f"Storing agg_by_hour_df csv file at {path}data/agg_by_hour_df.csv ...")
 
 pdf = agg_by_hour_df.toPandas()
 pdf.to_csv(f"{path}data/agg_by_hour_df.csv", index=False)
 
-logging.warn(f"Storing agg_by_ip_df csv file at {path}data/agg_by_ip_df.csv ...")
+logging.warning(f"Storing agg_by_ip_df csv file at {path}data/agg_by_ip_df.csv ...")
 
 pdf_ip = agg_by_ip_df.toPandas()
 pdf_ip.to_csv(f"{path}data/agg_by_ip_df.csv", index=False)
