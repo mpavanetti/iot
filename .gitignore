@@ -8,3 +8,4 @@ iot_hub/infrastructure/notebooks/spark-warehouse/
 iot_hub/webapp/__pycache__/*
 iot_hub/webapp/application/__pycache__/*
 iot_hub/webapp/application/config/__pycache__/*
+iot_hub/infrastructure/cron/logs/*
