@@ -8,18 +8,20 @@ import rp2
 import binascii
 import picozero
 import ntptime
+from ssd1306 import SSD1306_I2C
 
 
 # Wifi, can be overwriten
-wifi_sid = "raspberry"
-wifi_pswd = "matheus22"
+wifi_sid = ""
+wifi_pswd = ""
 
 # Remote Host, can be overwriten
 remote_port = 1500
-remote_address = "192.168.50.1"
+remote_address = "192.168.1.80"
 
-# Sensor variables
+# i2c variables bme 280 and ssd1306
 i2c = I2C(0, sda=Pin(0), scl=Pin(1), freq=400000)
+oled = SSD1306_I2C(128, 64, i2c)
 
 # Country Location
 rp2.country('US')
@@ -102,3 +104,15 @@ class Data:
             "humidity": hum,
             "read_datetime": f"{now[0]}-{now[1]}-{now[2]} {now[3]}:{now[4]}:{now[5]}",
         }
+    
+    def display(self):
+        temp, press, hum = self.bme.values
+        ip = self.wlan.ifconfig()[0]
+        oled.fill(0)
+        oled.text(f"IP:{ip}",0,0)
+        oled.text(f"Temp:{temp}",0,10)
+        oled.text(f"Hum:{hum}",0,20)
+        oled.text(f"Press:{press}",0,30)
+        oled.text(f"Streaming [{remote_port}]:",0,40)
+        oled.text(f"{remote_address}",0,50)
+        oled.show()

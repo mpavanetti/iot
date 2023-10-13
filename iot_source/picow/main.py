@@ -33,10 +33,11 @@ with Data() as data:
                             "mem_alloc_bytes":gc.mem_alloc(),
                             "mem_free_bytes":gc.mem_free(),
                             "cpu_freq_mhz": machine.freq()/1000000,
-    
+
                         },
                         "bme280": data.read_bme280(),
                     }
+                    data.display()
                     data.remoteHost_send(payload)
 
     except Exception as e:
