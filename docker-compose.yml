@@ -42,6 +42,7 @@ services:
     volumes:
       - ./iot_hub/infrastructure/data:/home/jovyan/work/data:rw
       - ./iot_hub/infrastructure/jars:/home/jovyan/work/jars:rw
+      - ./iot_hub/infrastructure/jobs:/home/jovyan/work/jobs:rw
     user: root
       
 
@@ -65,6 +66,7 @@ services:
     volumes:
       - ./iot_hub/infrastructure/data:/home/jovyan/work/data:rw
       - ./iot_hub/infrastructure/jars:/home/jovyan/work/jars:rw
+      - ./iot_hub/infrastructure/jobs:/home/jovyan/work/jobs:rw
     user: root
 
   mariadb:
