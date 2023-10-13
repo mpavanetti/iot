@@ -21,7 +21,7 @@ sudo chmod -R 777 iot_hub/infrastructure/data
 In this case, I am using a raspberry pi 4 (8GB) as the IoT Center infrastructure host as matter of convinience.  
 However you can use and infrastructure (Linux Server) at your choice.  
 If you decide to use the raspberry pi 4 as me (optional), here are additional steps that I used to set it up.  
-[Instructions](iot_hub/infrastructure/README.md)  
+[Notes](iot_hub/infrastructure/README.md)  
   
   
 ## Instructions IoT Source.
