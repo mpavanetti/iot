@@ -138,6 +138,20 @@ services:
       - "./iot_hub/webapp/:/python-docker"
       - "/var/run/docker.sock:/var/run/docker.sock"
 
+  crontab:
+    hostname: crontab
+    build:
+      context: ./iot_hub/infrastructure/cron/.
+    restart: on-failure
+    networks:
+      - spark-network
+    volumes:
+      - "./iot_hub/infrastructure/cron/logs:/var/log"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - type: bind
+        source: ./docker-compose.yml
+        target: /home/docker-compose.yml
+
 networks:
   spark-network:
     external: true
