@@ -1,2 +1,2 @@
-0 * * * * /scripts/script.sh  > /var/log/`date +\%Y\%m\%d\%H\%M\%S`-spark-cron.log 2>&1
+*/5 * * * * /scripts/run_process_iot_spark.sh  > /var/log/`date +\%Y\%m\%d\%H\%M\%S`-spark-cron.log 2>&1
 @daily /scripts/cleanup.sh >> /var/log/cleanup.log
