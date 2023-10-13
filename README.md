@@ -13,6 +13,9 @@ docker compose up -d
 
 # Containers plus jupyter Lab (Optional)
 docker compose --profile jupyter up -d
+
+# add permissions to data folder
+sudo chmod -R 777 iot_hub/infrastructure/data
 ```
 
 In this case, I am using a raspberry pi 4 (8GB) as the IoT Center infrastructure host as matter of convinience.  
@@ -29,7 +32,7 @@ I am using a raspberry pi pico w to interface with the IoT sensors (bme 280) in 
 4. Once it is recognized as an external device, copy the recent .uf2 firmware file to the root of the device. it will reboot.
 5. Once it starts up again you won't be able to see it.
 6. Download an ide your choice, in my case I am using thonny https://thonny.org/ 
-7. If you are using thonny, go to tools manage packages and install the package micropython-bme280.
+7. If you are using thonny, go to tools manage packages and install the packages **micropython-bme280**, **micropython_ssd1306**, **picozero**.
 8. Once you have installed the required library, upload to the raspberry pi pico w the files [data.py](iot_source/picow/data.py) and [main.py](iot_source/picow/main.py).
 9. Unplug it from your pc.
 10. Plug it into any 5V usb port.
@@ -75,4 +78,10 @@ Datasheet: [Bosh BME280 Datasheet](https://www.bosch-sensortec.com/media/boschse
 Purchased at amazon: [BME 280 Amazon Canada](https://www.amazon.ca/Pre-Soldered-Atmospheric-Temperature-GY-BME280-3-3-MicroControllers/dp/B0BQFV883T/ref=sr_1_3?crid=1L7XEC6ZMGO0J&keywords=bme+280&qid=1693195924&sprefix=bme+280%2Caps%2C113&sr=8-3). 
 
 <img src="img/bme280.jpg" alt="drawing" width="200"/>
+  
 
+### LCD Display SSD1306
+LCD Display single color, 0.96 inches ssd 1306  
+Purchased at amazon: [SSD1306 Display Amazon US](https://www.amazon.com/dp/B06XRBYJR8?ref=ppx_yo2ov_dt_b_product_details&th=1)
+
+<img src="img/ssd1306.jpg" alt="drawing" width="200"/>
