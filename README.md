@@ -17,6 +17,8 @@ docker compose --profile jupyter up -d
 # add permissions to data folder
 sudo chmod -R 777 iot_hub/infrastructure/data
 ```
+  
+Access it at http://localhost/  or http://raspberrypi.local/
 
 In this case, I am using a raspberry pi 4 (8GB) as the IoT Center infrastructure host as matter of convinience.  
 However you can use and infrastructure (Linux Server) at your choice.  
@@ -43,7 +45,7 @@ Webapp home screen.
 
 ![home](img/home.jpg)  
   
-Real time data steaming screen.  
+Real time data streaming screen.  
 ![stream](img/streaming.png)  
   
 General Hardware Information screen.
