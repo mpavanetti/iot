@@ -54,9 +54,12 @@ Interactive Jupyter Lab and spark client.
 
 Spark Master with 1 spark worker running.
 ![sparkmaster](img/sparkmaster.jpg)  
-  
 
-## IOT Components
+  
+## IoT Source
+![board](img/board.jpg)
+
+## IoT Components
 
 ### Raspberry Pi Pico W
 Raspberry Pi Pico Wifi  
