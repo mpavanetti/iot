@@ -186,13 +186,3 @@ logging.warning(f"Storing {agg_by_ip_df.count()} records at mariadb table agg_by
         .option("password", "mysql") 
         .option("dbtable", "agg_by_ip_df") 
         .save())
-
-logging.warning(f"Storing agg_by_hour_df csv file at {path}data/agg_by_hour_df.csv ...")
-
-pdf = agg_by_hour_df.toPandas()
-pdf.to_csv(f"{path}data/agg_by_hour_df.csv", index=False)
-
-logging.warning(f"Storing agg_by_ip_df csv file at {path}data/agg_by_ip_df.csv ...")
-
-pdf_ip = agg_by_ip_df.toPandas()
-pdf_ip.to_csv(f"{path}data/agg_by_ip_df.csv", index=False)
