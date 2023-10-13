@@ -25,6 +25,9 @@ However you can use and infrastructure (Linux Server) at your choice.
 If you decide to use the raspberry pi 4 as me (optional), here are additional steps that I used to set it up.  
 [Notes](iot_hub/infrastructure/README.md)  
   
+Obs: jupyerlab initial password = tad
+  
+  
   
 ## Instructions IoT Source.
 I am using a raspberry pi pico w to interface with the IoT sensors (bme 280) in order to capture the data read by the sensors and send it through tcp/ip to the server.  
