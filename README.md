@@ -1,4 +1,13 @@
 # IOT Project
+## Project Architecture
+![diagram](img/diagram-light.jpg)
+  
+### Overview
+The Microcontroller board Raspberry pi pico wifi is in charge of wired reading data from IoT sensor BME 280, which provides temperature, humidity and pressure data on read with efficiency. For this use case, a development kit and breadboard was used to make it easy to wire the raspberry pi pico w gpio outputs and the components inputs.  
+Once data is read by the raspberry pi pico w, through tcp/ip connection it sends bytes of data every 2 seconds(configurable) to a tcp/ip socket listener hosted within docker infrastructure. Which is also in charge of publishing the received data into a kafka broker further stored in a kafka topic for 7 days.  
+Then, we have a Python flask api querying the kafka topic in real time and opening a stream with the web ui for displaying real time data in a dashboard. 
+In parallel a crontab service is launching a spark batch application every hour for processing chunks of data, cleaning, transforming and aggregating data and finally storing the aggregated data into mysql tables.
+Once the data is finilized on mysql tables, they are shown in a beautiful streamlit analytical dashboard with history of the data and filters.
 
 
 ## Instructions IoT Center
