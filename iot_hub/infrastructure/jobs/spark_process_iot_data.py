@@ -100,7 +100,7 @@ agg_by_hour_df = (
                  .withColumn("month", month(col("read_date")))
                  .withColumn("year", year(col("read_date")))
                  
-                 .groupBy(hour(col("read_datetime")).alias("hour"))
+                 .groupBy("year", "month", "day", hour(col("read_datetime")).alias("hour"))
                  .agg(
                       count(col("id")).alias("count"),
 
