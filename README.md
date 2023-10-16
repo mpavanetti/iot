@@ -71,6 +71,10 @@ Spark Master with 1 spark worker running.
   
 ## IoT Source
 ![board](img/board.jpg)
+  
+## Host Server
+In this use case, I am using a raspberry pi 4 (8GB) acting as the docker server. Any linux host could be used in this case
+![board](img/pi4.jpg)
 
 ## IoT Components
 
