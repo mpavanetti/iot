@@ -107,11 +107,7 @@ agg_by_hour_df = (
                       # date columns
                       max(col("read_datetime")).alias("datetime"),
                       max(col("read_date")).alias("date"),
-                      max(col("day")).alias("day"),
-                      max(col("month")).alias("month"),
-                      max(col("year")).alias("year"),
                       
-
                       # bme temperature metrics
                       round(min(col("bme280_temperature")),2).alias("min_bme_temp"),
                       round(avg(col("bme280_temperature")),2).alias("avg_bme_temp"),
