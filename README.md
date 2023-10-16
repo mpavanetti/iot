@@ -13,6 +13,7 @@ docker compose up -d
 
 # Containers plus jupyter Lab (Optional)
 docker compose --profile jupyter up -d
+or in case you want to start it after just run: docker-compose up -d jupyter-notebook-pyspark
 
 # add permissions to data folder
 sudo chmod -R 777 iot_hub/infrastructure/data
