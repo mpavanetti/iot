@@ -8,6 +8,12 @@ Run the following commands:
 git clone https://github.com/mpavanetti/iot.git
 cd iot
 
+# create and add permissions to data folder
+sudo mkdir iot_hub/infrastructure/data && sudo chmod -R 777 iot_hub/infrastructure/data
+
+# Create external docker network
+sudo docker network create spark-network
+
 # Standard container configuration (No Jupyter Lab)
 docker compose up -d 
 
@@ -15,8 +21,7 @@ docker compose up -d
 docker compose --profile jupyter up -d
 or in case you want to start it after just run: docker-compose up -d jupyter-notebook-pyspark
 
-# add permissions to data folder
-sudo chmod -R 777 iot_hub/infrastructure/data
+
 ```
   
 Access it at http://localhost/  or http://raspberrypi.local/
