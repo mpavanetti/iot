@@ -4,6 +4,7 @@ kafka_broker_list = [f"{localhost}:29092"]
 
 services = {
     "iotcenter": {"description": "IoT Center", "port": 80},
+    "analytics": {"description": "Analytics Dashboard", "port": 8501},
     "vnc": {"description": "VNC Server (raspberrypi:1)", "port": 5901},
     "vnc2": {"description": "VNC Server (raspberrypi:2)", "port": 5902},
     "ftp": {"description": "FTP Server", "port": 21},

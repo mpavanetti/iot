@@ -20,8 +20,9 @@
       </li>
       <li>
         <a
-          href="dashboard"
-          class="nav-link px-0 align-middle">
+          id="dashboard"
+          class="nav-link px-0 align-middle" 
+          target="_blank">
           <i class="fs-4 bi-speedometer2"></i>
           <span class="ms-1 d-none d-sm-inline">Dashboard</span>
         </a>
@@ -102,6 +103,7 @@
 </div>
 
 <script>
+  document.getElementById("dashboard").href =  'http://'+document.location.hostname+':8501';
   document.getElementById("jupyter_link").href =  'http://'+document.location.hostname+':8888';
   document.getElementById("sparkmaster_link").href =  'http://'+document.location.hostname+':8080';
   document.getElementById("sparkworker1_link").href =  'http://'+document.location.hostname+':8081';
