@@ -4,3 +4,4 @@ plost
 plotly
 mysqlclient
 SQLAlchemy
+pymysql
