@@ -1,29 +1,12 @@
 from pyspark.sql.session import SparkSession
 from pyspark.sql.types import StructType, StructField, StringType, DoubleType, IntegerType, DateType, TimestampType
 from pyspark.sql.functions import lit, col, from_json, regexp_replace, to_timestamp, current_timestamp, to_utc_timestamp
-import os
 import logging
-path = f"{os.getcwd()}/../"
-
-packages = [
-    "org.apache.spark:spark-sql-kafka-0-10_2.12:3.4.1",
-    "org.apache.kafka:kafka-clients:3.2.1"
-]
-
-jars = [
-    f"/home/jovyan/work/jars/commons-pool2-2.11.1.jar",
-    f"/home/jovyan/work/jars/spark-sql-kafka-0-10_2.12-3.4.1.jar",
-    f"/home/jovyan/work/jars/kafka-clients-3.5.1.jar",
-    f"/home/jovyan/work/jars/spark-token-provider-kafka-0-10_2.12-3.4.1.jar",
-    f"/home/jovyan/work/jars/mysql-connector-j-8.0.31.jar",
-]
 
 spark = (SparkSession
          .Builder()
          .appName(name="process_iot_data")
          .master("spark://spark:7077")
-         .config("spark.jars", ",".join(jars))
-         .config("spark.jars.packages", ",".join(packages))
          .getOrCreate())
 
 spark.sparkContext.setLogLevel("WARN")
