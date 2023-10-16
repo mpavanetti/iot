@@ -8,9 +8,17 @@ from pandas.api.types import (
 )
 import plotly.express as px
 from sqlalchemy import create_engine
+from os import getenv
+
+# Mariadb variables
+mariadb_host = getenv("MARIADB_HOST","mariadb")
+mariadb_user = getenv("MARIADB_USER","mysql")
+mariadb_password = getenv("MARIADB_PASSWORD","mysql")
+mariadb_database = getenv("MARIADB_DATABASE","data")
+mariadb_port = int(getenv("MARIADB_PORT", 3306))
 
 # Mariadb SQL Engine
-engine = create_engine("mariadb+pymysql://mysql:mysql@192.168.1.80/data?charset=utf8mb4")
+engine = create_engine(f"mariadb+pymysql://{mariadb_user}:{mariadb_password}@{mariadb_host}/{mariadb_database}?charset=utf8mb4")
 
 # Read Dataframe with pandas load_agg_by_hour
 #@st.cache_data
