@@ -54,13 +54,20 @@ Real time data streaming screen.
   
 General Hardware Information screen.
 ![hardware](img/hardware.jpg)  
+
+### Analytics Dashboard
+![Dashboard](analytics/img/dash.jpg)  
   
+![Dashboard](analytics/img/dash2.jpg)  
+  
+![Dashboard](analytics/img/dash3.jpg)
+  
+### Tools
 Interactive Jupyter Lab and spark client.
 ![jupyter](img/jupyter.jpg)  
 
 Spark Master with 1 spark worker running.
 ![sparkmaster](img/sparkmaster.jpg)  
-
   
 ## IoT Source
 ![board](img/board.jpg)
