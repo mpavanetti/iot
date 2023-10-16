@@ -7,16 +7,20 @@ from pandas.api.types import (
     is_object_dtype,
 )
 import plotly.express as px
+from sqlalchemy import create_engine
+
+# Mariadb SQL Engine
+engine = create_engine("mariadb+pymysql://mysql:mysql@192.168.1.80/data?charset=utf8mb4")
 
 # Read Dataframe with pandas load_agg_by_hour
 #@st.cache_data
 def load_agg_by_hour():
-    return pd.read_csv("data/agg_by_hour_df.csv")
+    return pd.read_sql("SELECT * FROM agg_by_hour_df", engine)
 
 # Read Dataframe with pandas load_agg_by_ip
 #@st.cache_data
 def load_agg_by_ip():
-    return pd.read_csv("data/agg_by_ip_df.csv")
+    return pd.read_sql("SELECT * FROM agg_by_ip_df", engine)
 
 # Row A - BME Sensor Statistics
 def transform_agg_by_hour(df: pd.Series):
