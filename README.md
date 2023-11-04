@@ -1,5 +1,5 @@
-# IOT Project
-## Project Architecture
+# IOT Data ingestion and data processing
+## Pipeline Architecture
 ![diagram](img/diagram-light.jpg)
   
 ### Overview
