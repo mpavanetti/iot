@@ -1,4 +1,0 @@
-flask
-psutil
-kafka-python
-docker

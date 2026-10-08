@@ -1,121 +1,173 @@
-# IOT Data ingestion and data processing
-## Pipeline Architecture
-![diagram](img/diagram-light.jpg)
-  
-### Overview
-The Microcontroller board Raspberry pi pico wifi is in charge of wired reading data from IoT sensor BME 280, which provides temperature, humidity and pressure data on read with efficiency. For this use case, a development kit and breadboard was used to make it easy to wire the raspberry pi pico w gpio outputs and the components inputs.  
-Once data is read by the raspberry pi pico w, through tcp/ip connection it sends bytes of data every 2 seconds(configurable) to a tcp/ip socket listener hosted within docker infrastructure. Which is also in charge of publishing the received data into a kafka broker further stored in a kafka topic for 7 days.  
-Then, we have a Python flask api querying the kafka topic in real time and opening a stream with the web ui for displaying real time data in a dashboard. 
-In parallel a crontab service is launching a spark batch application every hour for processing chunks of data, cleaning, transforming and aggregating data and finally storing the aggregated data into mysql tables.
-Once the data is finilized on mysql tables, they are shown in a beautiful streamlit analytical dashboard with history of the data and filters.
+# IoT Center
 
+**Temperature, humidity and pressure from Raspberry Pi Pico W boards, from the breadboard to the dashboard.**
 
-## Instructions IoT Center
-Download docker and docker compose on its latest version.  
-Run the following commands:
+A Pico W reads a BME280 sensor and streams one JSON line per reading over Wi-Fi (or USB).
+IoT Center receives, validates, stores and charts those readings, live and historically.
+It comes in two editions that share the same firmware, the same message contract and the same dashboard:
+
+| | **Lite** | **Platform** |
+|---|---|---|
+| What runs | one Python process | Kafka, Spark Structured Streaming, PostgreSQL, Streamlit, Docker Compose |
+| Ingestion | TCP and USB serial | gateway: TCP (and USB) into Kafka, with a dead-letter topic |
+| History | SQLite: raw readings + hourly aggregates | PostgreSQL written by Spark: raw readings + hourly aggregates |
+| Analytics | dashboard history (1 h to 30 days), CSV export | the same, plus a Streamlit app: patterns, data quality, explorer |
+| Footprint | about 100 MB of RAM | about 3.5 GB of RAM (fits a Raspberry Pi 4 with 8 GB) |
+| Start with | `iotcenter lite` | `docker compose up -d` |
+| Good for | one or a few boards, a laptop, a Pi Zero 2, USB-only setups | learning and showing off a real streaming data platform |
+
+![The live dashboard: KPI tiles with sparklines, temperature and dew point, humidity and pressure, streaming from three boards](docs/img/screenshots/dashboard-live.png)
+
+## How it works
+
+### Lite: one process
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/img/architecture-lite-dark.svg">
+  <img alt="IoT Center Lite: one Python process receives readings over TCP or USB, validates them, stores them in SQLite and pushes them live to the dashboard." src="docs/img/architecture-lite-light.svg">
+</picture>
+
+Each line from a board is validated against the [message contract](docs/protocol.md), stored in SQLite
+(raw readings, an hourly rollup and a device registry) and pushed to every open dashboard over
+Server-Sent Events. There is no broker and no database server, just one process and one file.
+
+### Platform: a streaming pipeline
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/img/architecture-platform-dark.svg">
+  <img alt="IoT Center Platform: a reading travels from the Pico W through the gateway, Kafka and Spark Structured Streaming into PostgreSQL; the dashboard reads live data from Kafka and history from PostgreSQL; Streamlit reads PostgreSQL." src="docs/img/architecture-platform-light.svg">
+</picture>
+
+1. The **gateway** validates each line and publishes it to Kafka, keyed by device so every board's readings stay in order. Invalid lines go to a dead-letter topic, with the reason.
+2. **Kafka** keeps a durable, replayable seven-day log of every reading.
+3. **Spark Structured Streaming** reads Kafka every 10 seconds. It parses and validates against an explicit schema, then computes hourly aggregates with an event-time watermark. It writes both to PostgreSQL with idempotent upserts, so a replayed micro-batch never duplicates anything.
+4. The **dashboard** streams live readings straight from Kafka (a reading appears in the browser about 10 ms after it reaches the gateway) and reads history from PostgreSQL.
+5. **Streamlit** turns the PostgreSQL tables into analytics: daily rhythms, ranges, delivery quality and a raw-data explorer.
+
+The [architecture guide](docs/architecture.md) explains each design decision: why NDJSON over a persistent socket,
+why the Kafka key is the device, how exactly-once writes work, and what happens when each piece fails.
+
+## Quick start
+
+### Try it in two minutes, no hardware needed (Lite)
+
+```bash
+git clone https://github.com/mpavanetti/iot.git && cd iot
+python3 -m venv .venv && . .venv/bin/activate
+pip install -e ".[lite]"
+
+iotcenter lite                                   # dashboard: http://localhost:8000
+python simulator/simulate_picow.py --devices 3   # in a second terminal: three fake boards
 ```
-git clone https://github.com/mpavanetti/iot.git
-cd iot
 
-# create and add permissions to data folder
-sudo mkdir iot_hub/infrastructure/data && sudo chmod -R 777 iot_hub/infrastructure/data
+Add `--backfill 7d` to the simulator to fill a week of history first. Prefer Docker? Run
+`docker compose up -d --build` in [`lite/`](lite/README.md).
 
-# Create external docker network
-sudo docker network create spark-network
+### The full platform
 
-# Standard container configuration (No Jupyter Lab)
-docker compose up -d 
+```bash
+cd platform
+cp .env.example .env            # optional: ports, time zone, Spark size
+docker compose up -d --build    # first build takes a few minutes
+python ../simulator/simulate_picow.py --devices 3 --backfill 1d
+```
 
-# Containers plus jupyter Lab (Optional)
-docker compose --profile jupyter up -d
-or in case you want to start it after just run: docker-compose up -d jupyter-notebook-pyspark
+| UI | URL |
+|---|---|
+| Dashboard | http://localhost:8000 |
+| Analytics (Streamlit) | http://localhost:8501 |
+| Spark master / streaming job | http://localhost:8080 / http://localhost:4040 |
+| Kafka UI (optional: `make tools`) | http://localhost:8090 |
 
+See [`platform/README.md`](platform/README.md) for the services, ports and day-to-day commands.
+
+### With a real Pico W
+
+Wire a BME280 (and optionally an SSD1306 OLED) to the Pico W, flash MicroPython, copy
+[`firmware/`](firmware/README.md) to the board and set your Wi-Fi and server in `config.py`.
+The same firmware works with both editions, over Wi-Fi or plain USB.
+
+## Screenshots
+
+| | |
+|---|---|
+| ![24-hour history in dark mode, with min–max bands and a tooltip](docs/img/screenshots/dashboard-history-dark.png) | ![The Pipeline page: every stage with its health and counters](docs/img/screenshots/dashboard-pipeline.png) |
+| History with min–max bands, dark mode | The Pipeline page: a live architecture diagram |
+| ![Streamlit overview with KPIs and hourly averages per device](docs/img/screenshots/analytics-overview.png) | ![Streamlit patterns: hour-of-day heatmap and daily ranges](docs/img/screenshots/analytics-patterns.png) |
+| Streamlit: overview | Streamlit: daily patterns |
+| ![Streamlit data quality: Spark progress and delivery per device](docs/img/screenshots/analytics-quality.png) | <img src="docs/img/screenshots/dashboard-mobile.png" alt="The dashboard on a phone" width="260"> |
+| Streamlit: data quality | The dashboard on a phone |
+
+## Project layout
 
 ```
-  
-Access it at http://localhost/  or http://raspberrypi.local/
+firmware/        MicroPython for the Pico W: read the BME280, stream NDJSON, buffer when offline
+simulator/       simulate_picow.py: realistic fake boards over TCP, USB (pty), Kafka or stdout
+src/iotcenter/   the Python package, one module per job:
+  protocol.py      the message contract (pydantic): parse, validate, upgrade 2023 v1 payloads
+  ingest.py        TCP server + USB serial reader, shared by Lite and the gateway
+  hub.py           live fan-out to open dashboards (Server-Sent Events)
+  api.py           the dashboard's HTTP API; each edition plugs in a data source
+  lite/            Lite edition: SQLite storage + app
+  gateway.py       Platform: devices -> Kafka (+ dead-letter topic)
+  web/             Platform: dashboard backed by Kafka (live) and PostgreSQL (history)
+  analytics/       Platform: Streamlit app
+  dashboard/       the web UI (plain HTML, CSS and JavaScript + uPlot, no build step)
+lite/            Docker Compose for Lite (+ USB overlay)
+platform/        Docker Compose for the platform, the Spark jobs, the SQL schema, Kafka topics
+tests/           unit, integration and end-to-end tests
+docs/            guides: architecture, protocol, hardware, configuration, operations, Pi setup
+```
 
-In this case, I am using a raspberry pi 4 (8GB) as the IoT Center infrastructure host as matter of convinience.  
-However you can use and infrastructure (Linux Server) at your choice.  
-If you decide to use the raspberry pi 4 as me (optional), here are additional steps that I used to set it up.  
-[Notes](iot_hub/infrastructure/README.md)  
-  
-Obs: jupyerlab initial password = tad
-  
-  
-  
-## Instructions IoT Source.
-I am using a raspberry pi pico w to interface with the IoT sensors (bme 280) in order to capture the data read by the sensors and send it through tcp/ip to the server.  
-1. Go to the oficial micropython download page at https://micropython.org/download/RPI_PICO_W/ 
-2. Download the latest .uf2 firmware
-3. Plug your raspberry pi pico w into your pc through the usb port.
-4. Once it is recognized as an external device, copy the recent .uf2 firmware file to the root of the device. it will reboot.
-5. Once it starts up again you won't be able to see it.
-6. Download an ide your choice, in my case I am using thonny https://thonny.org/ 
-7. If you are using thonny, go to tools manage packages and install the packages **micropython-bme280**, **micropython_ssd1306**, **picozero**.
-8. Once you have installed the required library, upload to the raspberry pi pico w the files [data.py](iot_source/picow/data.py) and [main.py](iot_source/picow/main.py).
-9. Unplug it from your pc.
-10. Plug it into any 5V usb port.
+## Documentation
 
+- [Architecture](docs/architecture.md): the data flow, design decisions, delivery guarantees and failure modes
+- [Message contract](docs/protocol.md): every field, the framing, the Kafka topics and the API format
+- [Hardware](docs/hardware.md): parts, wiring, and what the LEDs, buttons and display show
+- [Firmware](firmware/README.md): flash, configure and upload, over Wi-Fi or USB
+- [Configuration](docs/configuration.md): every `IOT_*` setting and Compose variable
+- [Operations](docs/operations.md): day-to-day commands, backfills, Kafka and SQL recipes, troubleshooting
+- [Raspberry Pi host](docs/raspberry-pi.md): setting up a Pi 4 to run the platform
+- [Development](docs/development.md): tests, code tour and conventions
 
-## Images
-Webapp home screen.  
+## Development
 
-![home](img/home.jpg)  
-  
-Real time data streaming screen.  
-![stream](img/streaming.png)  
-  
-General Hardware Information screen.
-![hardware](img/hardware.jpg)  
+```bash
+make install      # .venv with everything
+make test         # unit + integration tests, no Docker needed
+make test-spark   # Spark transformations, inside the Spark image
+make e2e          # end-to-end against a running platform (make platform-up first)
+make lint         # ruff
+make help         # everything else
+```
 
-### Analytics Dashboard
-![Dashboard](analytics/img/dash.jpg)  
-  
-![Dashboard](analytics/img/dash2.jpg)  
-  
-![Dashboard](analytics/img/dash3.jpg)
-  
-### Tools
-Interactive Jupyter Lab and spark client.
-![jupyter](img/jupyter.jpg)  
+The tests exercise the real thing wherever practical: real sockets, a pseudo-terminal that stands in for a USB
+Pico W, the actual firmware running on CPython against fake hardware, Spark in local mode, and the full Docker
+stack end to end, from TCP into the gateway to rows in PostgreSQL and the Streamlit pages.
 
-Spark Master with 1 spark worker running.
-![sparkmaster](img/sparkmaster.jpg)  
-  
-## IoT Source
-![board](img/board.jpg)
-  
-## Host Server
-In this use case, I am using a raspberry pi 4 (8GB) acting as the docker server. Any linux host could be used in this case
-![board](img/pi4.jpg)
+## What changed from v1
 
-## IoT Components
+The [2023 version](https://github.com/mpavanetti/iot/tree/6afd26b) proved the idea. Version 2 rebuilds every layer:
 
-### Raspberry Pi Pico W
-Raspberry Pi Pico Wifi  
-Documentation: [raspberrypi oficial documentation](https://www.raspberrypi.com/documentation/microcontrollers/raspberry-pi-pico.html)  
-Datasheet:  [raspberry pi oficial datasheet](https://datasheets.raspberrypi.com/picow/pico-w-datasheet.pdf?_gl=1*ciizzx*_ga*MjA3MTMyNTAyOC4xNjkzMTk2Njg0*_ga_22FD70LWDS*MTY5MzE5NjY4NC4xLjAuMTY5MzE5NjY4NC4wLjAuMA..)  
-Purchased at Amazon: [Raspberry pi pico w Amazon Canada](https://www.amazon.ca/Freenove-Raspberry-Compatible-Pre-Soldered-Development/dp/B0BJ1PGZCX/ref=sr_1_2_sspa?crid=1A6CTHIL4FI77&keywords=raspberry%2Bpi%2Bpico%2Bw&qid=1693196600&sprefix=raspberry%2Bpi%2Bpico%2Bw%2Caps%2C140&sr=8-2-spons&sp_csd=d2lkZ2V0TmFtZT1zcF9hdGY&th=1).  
+| | v1 (2023) | v2 |
+|---|---|---|
+| Device protocol | one TCP connection per message, values like `"21.92C"` | persistent connection, NDJSON, typed numbers, sequence numbers, store-and-forward; v1 payloads still accepted |
+| Validation | none | one pydantic contract, enforced at the edge, plus a dead-letter topic |
+| Processing | hourly cron job re-reading all of Kafka and overwriting MariaDB | Spark Structured Streaming: incremental, checkpointed, idempotent; history kept beyond Kafka's retention |
+| Live view | one Kafka consumer per browser tab, with a sleep per message | one consumer per server, fan-out over SSE, about 10 ms end to end |
+| Images | Bitnami images (since retired), jars committed to git | official Apache Kafka 4.3, Spark 4.2 and PostgreSQL 18 images; checksum-verified jars |
+| Startup | `sleep 80` waiting for Kafka; a manually created network | health checks and explicit dependencies |
+| Lightweight option | none | Lite: one process, SQLite, USB support |
+| Tests | none | about 90 automated tests, including end to end |
 
-<img src="img/picow.jpg" alt="drawing" width="200"/>  
-  
+## Hardware
 
-### Pico Breadboard Kit
-Purchased at Amazon: [Pico Breadboard Kit Amazon Canada](https://www.amazon.ca/Freenove-Raspberry-Compatible-Pre-Soldered-Development/dp/B0BJ1PGZCX/ref=sr_1_2_sspa?crid=1A6CTHIL4FI77&keywords=raspberry%2Bpi%2Bpico%2Bw&qid=1693196600&sprefix=raspberry%2Bpi%2Bpico%2Bw%2Caps%2C140&sr=8-2-spons&sp_csd=d2lkZ2V0TmFtZT1zcF9hdGY&th=1).  
+![The Pico W on a Freenove breadboard kit with a BME280 sensor and an SSD1306 display](docs/img/hardware/board.jpg)
 
-<img src="img/breadboard.jpg" alt="drawing" width="200"/>  
+Raspberry Pi Pico W (or Pico 2 W), BME280 temperature/humidity/pressure sensor, optional 0.96" SSD1306 OLED,
+and a breadboard kit with buttons and LEDs. The host in the photos is a Raspberry Pi 4 (8 GB), but any Linux,
+macOS or Windows machine with Python or Docker works. Parts, links and wiring are in [docs/hardware.md](docs/hardware.md).
 
-### BME280 Sensor
-Combined humidity and pressure sensor BME280  
-Datasheet: [Bosh BME280 Datasheet](https://www.bosch-sensortec.com/media/boschsensortec/downloads/datasheets/bst-bme280-ds002.pdf).  
-Purchased at amazon: [BME 280 Amazon Canada](https://www.amazon.ca/Pre-Soldered-Atmospheric-Temperature-GY-BME280-3-3-MicroControllers/dp/B0BQFV883T/ref=sr_1_3?crid=1L7XEC6ZMGO0J&keywords=bme+280&qid=1693195924&sprefix=bme+280%2Caps%2C113&sr=8-3). 
+---
 
-<img src="img/bme280.jpg" alt="drawing" width="200"/>
-  
-
-### LCD Display SSD1306
-LCD Display single color, 0.96 inches ssd 1306  
-Purchased at amazon: [SSD1306 Display Amazon US](https://www.amazon.com/dp/B06XRBYJR8?ref=ppx_yo2ov_dt_b_product_details&th=1)
-
-<img src="img/ssd1306.jpg" alt="drawing" width="200"/>
+Built by [Matheus Pavanetti](https://github.com/mpavanetti).

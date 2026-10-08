@@ -1,0 +1,6 @@
+# Only pyproject.toml, README.md and src/ are needed to build the Python image.
+*
+!pyproject.toml
+!README.md
+!src/
+src/**/__pycache__

@@ -1,0 +1,74 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "iotcenter"
+version = "2.0.0"
+description = "Pico W + BME280 sensor pipeline: a single-process Lite edition (TCP/USB -> SQLite -> live dashboard) and a Kafka/Spark/PostgreSQL/Streamlit platform."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Matheus Pavanetti" }]
+dependencies = [
+    "pydantic>=2.13",
+    "pydantic-settings>=2.15",
+]
+
+[project.optional-dependencies]
+# IoT Center Lite: one process, SQLite, live dashboard. Also the base of the platform web services.
+lite = [
+    "fastapi>=0.142",
+    "uvicorn>=0.54",
+    "pyserial>=3.5",
+    "psutil>=7.2",
+]
+# Platform services: gateway (TCP -> Kafka) and web app (Kafka + PostgreSQL -> dashboard).
+platform = [
+    "iotcenter[lite]",
+    "aiokafka>=0.14",
+    "psycopg[binary,pool]>=3.3",
+    "httpx>=0.28",
+]
+# Platform analytics: the Streamlit app.
+analytics = [
+    "streamlit>=1.65",
+    "pandas>=3.0",
+    "plotly>=7.1",
+    "sqlalchemy>=2.1",
+    "psycopg[binary]>=3.3",
+]
+dev = [
+    "iotcenter[platform,analytics]",
+    "pytest>=9.1",
+    "pytest-asyncio>=1.4",
+    "ruff>=0.16",
+]
+
+[project.scripts]
+iotcenter = "iotcenter.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/iotcenter"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["firmware/lib"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+# MicroPython code targets a smaller language/library surface than CPython 3.11.
+"firmware/*" = ["UP", "SIM"]
+# Spark images ship Python 3.10.
+"platform/spark/*" = ["UP017"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = "-m 'not e2e'"
+markers = [
+    "e2e: end-to-end tests against a running Docker stack (run with `make e2e`)",
+]

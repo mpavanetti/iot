@@ -1,7 +1,0 @@
-streamlit
-pandas
-plost
-plotly
-mysqlclient
-SQLAlchemy
-pymysql

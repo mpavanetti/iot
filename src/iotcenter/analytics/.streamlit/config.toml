@@ -1,0 +1,21 @@
+# Streamlit settings for IoT Center Analytics (`iotcenter analytics` runs from this folder).
+[server]
+headless = true
+runOnSave = false
+
+[browser]
+gatherUsageStats = false
+
+[client]
+toolbarMode = "minimal"
+
+# Light and dark themes share the dashboard's validated palette (dark has its own steps).
+[theme.light]
+primaryColor = "#2a78d6"
+chartCategoricalColors = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#4a3aa7", "#e34948"]
+chartSequentialColors = ["#cde2fb", "#9ec5f4", "#86b6ef", "#6da7ec", "#5598e7", "#3987e5", "#2a78d6", "#256abf", "#184f95", "#0d366b"]
+
+[theme.dark]
+primaryColor = "#3987e5"
+chartCategoricalColors = ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300", "#9085e9", "#e66767"]
+chartSequentialColors = ["#0d366b", "#184f95", "#256abf", "#2a78d6", "#3987e5", "#5598e7", "#6da7ec", "#86b6ef", "#9ec5f4", "#cde2fb"]

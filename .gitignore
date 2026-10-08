@@ -1,12 +1,23 @@
-.vscode/*
-iot_source/webapp/__pycache__/*
-iot_source/webapp/application/__pycache__/*
-iot_hub/infrastructure/config/mariadb/*
-iot_hub/infrastructure/notebooks/.ipynb_checkpoints/*
-iot_hub/infrastructure/data/*
-iot_hub/infrastructure/notebooks/spark-warehouse/
-iot_hub/webapp/__pycache__/*
-iot_hub/webapp/application/__pycache__/*
-iot_hub/webapp/application/config/__pycache__/*
-iot_hub/infrastructure/cron/logs/*
-analytics/__pycache__/*
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+
+# Local settings and data (never commit Wi-Fi passwords or databases)
+firmware/config.py
+platform/.env
+lite/.env
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store

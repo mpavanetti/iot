@@ -1,0 +1,235 @@
+# IoT Center Platform: Pico W -> gateway -> Kafka -> Spark Structured Streaming -> PostgreSQL
+#                      -> dashboard (live + history) and Streamlit (analytics).
+#
+#   docker compose up -d --build          (from this folder; or `make platform-up`)
+#
+# Every published port can be changed in a .env file next to this one (see .env.example).
+# Startup order is explicit: health checks gate each step, no sleeps.
+
+name: iotcenter
+
+# One Dockerfile per image family; each service builds it (layers are cached and shared).
+x-python-service: &python-service
+  build:
+    context: ..
+    args:
+      EXTRAS: platform,analytics
+  restart: unless-stopped
+  environment: &python-env
+    IOT_KAFKA_BOOTSTRAP: kafka:9092
+    IOT_DATABASE_URL: postgresql://iot:${POSTGRES_PASSWORD:-iot}@postgres:5432/iot
+    IOT_GATEWAY_URL: http://gateway:8001
+    IOT_SPARK_MASTER_URL: http://spark-master:8080
+    IOT_ANALYTICS_URL: http://analytics:8501
+    IOT_TIMEZONE: ${TIMEZONE:-UTC}
+    # Ports the browser uses for links between the UIs (must match the published ports)
+    IOT_ANALYTICS_PUBLIC_PORT: ${ANALYTICS_PORT:-8501}
+    IOT_SPARK_PUBLIC_PORT: ${SPARK_UI_PORT:-8080}
+    IOT_SPARK_APP_PUBLIC_PORT: ${SPARK_APP_PORT:-4040}
+
+x-spark-service: &spark-service
+  build: ./spark
+  restart: unless-stopped
+  environment: &spark-env
+    KAFKA_BOOTSTRAP: kafka:9092
+    KAFKA_TOPIC: iot.readings
+    POSTGRES_DSN: postgresql://iot:${POSTGRES_PASSWORD:-iot}@postgres:5432/iot
+    CHECKPOINT_DIR: /opt/spark/checkpoints
+
+services:
+  # --- Messaging ---------------------------------------------------------------------------
+  kafka:
+    image: apache/kafka:4.3.1
+    restart: unless-stopped
+    ports:
+      - "${KAFKA_PORT:-9094}:9094"  # for tools on the host, e.g. the simulator's kafka:// mode
+    environment:
+      CLUSTER_ID: sayOqKT0R7W0bANVjiHmMg  # any base64 UUID (kafka-storage.sh random-uuid)
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller  # KRaft: no ZooKeeper
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://${KAFKA_EXTERNAL_HOST:-localhost}:${KAFKA_PORT:-9094}
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_SHARE_COORDINATOR_STATE_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_SHARE_COORDINATOR_STATE_TOPIC_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"  # topics are created explicitly by kafka-init
+      KAFKA_HEAP_OPTS: -Xms256m -Xmx512m       # small enough for a Raspberry Pi
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 15s
+      retries: 12
+      start_period: 15s
+
+  kafka-init:  # one-shot: creates the topics, then exits
+    image: apache/kafka:4.3.1
+    entrypoint: ["/bin/bash", "/create-topics.sh"]
+    volumes:
+      - ./kafka/create-topics.sh:/create-topics.sh:ro
+    depends_on:
+      kafka:
+        condition: service_healthy
+    restart: "no"
+
+  # --- Ingestion ---------------------------------------------------------------------------
+  gateway:
+    <<: *python-service
+    command: ["iotcenter", "gateway"]
+    ports:
+      - "${GATEWAY_PORT:-1500}:1500"  # point the Pico W firmware here
+    environment:
+      <<: *python-env
+      IOT_HTTP_PORT: "8001"
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  # --- Processing: a standalone Spark cluster + the streaming job (the driver) -------------
+  spark-master:
+    <<: *spark-service
+    command: ["/opt/spark/bin/spark-class", "org.apache.spark.deploy.master.Master",
+              "--host", "spark-master", "--port", "7077", "--webui-port", "8080"]
+    ports:
+      - "${SPARK_UI_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8080/json/"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  spark-worker:
+    <<: *spark-service
+    command: ["/opt/spark/bin/spark-class", "org.apache.spark.deploy.worker.Worker",
+              "--cores", "${SPARK_WORKER_CORES:-2}", "--memory", "${SPARK_WORKER_MEMORY:-2g}",
+              "spark://spark-master:7077"]
+    volumes:
+      - spark-checkpoints:/opt/spark/checkpoints  # executors write streaming state here
+    depends_on:
+      spark-master:
+        condition: service_healthy
+
+  spark-streaming:
+    <<: *spark-service
+    hostname: spark-streaming
+    command: ["/opt/spark/bin/spark-submit",
+              "--master", "spark://spark-master:7077",
+              "--name", "iot-stream-readings",
+              "--conf", "spark.driver.host=spark-streaming",
+              "--conf", "spark.driver.bindAddress=0.0.0.0",
+              "--conf", "spark.driver.memory=512m",
+              "--conf", "spark.executor.memory=768m",
+              # one core is plenty for sensor data and leaves the other for batch jobs
+              "--conf", "spark.cores.max=${SPARK_STREAMING_CORES:-1}",
+              "/opt/spark/jobs/stream_readings.py"]
+    ports:
+      - "${SPARK_APP_PORT:-4040}:4040"  # the job's own UI: Structured Streaming tab
+    volumes:
+      - spark-checkpoints:/opt/spark/checkpoints  # offsets + state: restarts resume here
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      spark-worker:
+        condition: service_started
+
+  spark-rebuild:  # on demand: `make rebuild-hourly` recomputes readings_hourly
+    <<: *spark-service
+    profiles: [jobs]
+    restart: "no"
+    command: ["/opt/spark/bin/spark-submit", "--master", "spark://spark-master:7077",
+              "--conf", "spark.executor.memory=768m", "--conf", "spark.cores.max=1",
+              "--conf", "spark.driver.host=spark-rebuild", "--conf", "spark.driver.bindAddress=0.0.0.0",
+              "/opt/spark/jobs/rebuild_hourly.py"]
+    hostname: spark-rebuild
+    depends_on:
+      postgres:
+        condition: service_healthy
+      spark-master:
+        condition: service_healthy
+
+  # --- Storage -----------------------------------------------------------------------------
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: iot
+      POSTGRES_USER: iot
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-iot}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"  # localhost only; use an SSH tunnel to reach it
+    volumes:
+      - postgres-data:/var/lib/postgresql
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "iot", "-d", "iot"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  # --- Serving -----------------------------------------------------------------------------
+  web:
+    <<: *python-service
+    command: ["iotcenter", "web"]
+    ports:
+      - "${WEB_PORT:-8000}:8000"
+    environment:
+      <<: *python-env
+      IOT_TCP_PORT: ${GATEWAY_PORT:-1500}  # shown in the dashboard's "point your Pico W at" hint
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  analytics:
+    <<: *python-service
+    command: ["iotcenter", "analytics"]
+    ports:
+      - "${ANALYTICS_PORT:-8501}:8501"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8501/_stcore/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  # --- Optional tools: `docker compose --profile tools up -d` ------------------------------
+  kafka-ui:
+    image: kafbat/kafka-ui:v1.5.0
+    profiles: [tools]
+    restart: unless-stopped
+    ports:
+      - "${KAFKA_UI_PORT:-8090}:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: iotcenter
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+volumes:
+  kafka-data:
+  postgres-data:
+  spark-checkpoints:

@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Live and historical readings from Raspberry Pi Pico W + BME280 sensors.">
+  <title>IoT Center</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/vendor/uPlot.min.css">
+  <link rel="stylesheet" href="assets/app.css">
+  <script>
+    // Apply the saved theme before first paint (no flash of the wrong theme).
+    try { const t = localStorage.getItem("iot-theme"); if (t) document.documentElement.dataset.theme = t; } catch {}
+  </script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#overview" aria-label="IoT Center home">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><use href="#icon-chip"/></svg>
+      <span>IoT Center</span>
+      <span class="edition" id="edition" hidden></span>
+    </a>
+    <nav class="tabs" aria-label="Views">
+      <a href="#overview" data-view="overview">Overview</a>
+      <a href="#devices" data-view="devices">Devices</a>
+      <a href="#pipeline" data-view="pipeline">Pipeline</a>
+      <span class="tab-links" id="external-links"></span>
+    </nav>
+    <div class="topbar-end">
+      <span class="connection" id="connection" data-state="connecting" role="status" aria-live="polite">
+        <span class="dot" aria-hidden="true"></span><span class="label">Connecting…</span>
+      </span>
+      <button class="icon-button" id="theme-toggle" type="button" title="Theme: auto" aria-label="Switch theme (auto)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-theme"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Overview: one device, live or historical -->
+    <section class="view" id="view-overview" aria-labelledby="overview-title">
+      <h1 class="visually-hidden" id="overview-title">Overview</h1>
+
+      <div class="filters">
+        <label class="field">
+          <span>Device</span>
+          <select id="device-select" aria-label="Device"></select>
+        </label>
+        <div class="segmented" id="range-select" role="radiogroup" aria-label="Time range">
+          <button type="button" role="radio" data-range="live">Live</button>
+          <button type="button" role="radio" data-range="1h">1h</button>
+          <button type="button" role="radio" data-range="6h">6h</button>
+          <button type="button" role="radio" data-range="24h">24h</button>
+          <button type="button" role="radio" data-range="7d">7d</button>
+          <button type="button" role="radio" data-range="30d">30d</button>
+        </div>
+        <span class="spacer"></span>
+        <a class="button" id="export-csv" href="#" download>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-download"/></svg>CSV
+        </a>
+        <span class="updated" id="updated" aria-live="off"></span>
+      </div>
+
+      <div class="empty-state card" id="empty-state" hidden>
+        <svg viewBox="0 0 32 32" aria-hidden="true"><use href="#icon-chip"/></svg>
+        <h2>Waiting for the first reading</h2>
+        <p>Point a Pico W at <code id="ingest-address">tcp://&lt;this host&gt;:1500</code>, plug one in over USB, or start the simulator:</p>
+        <pre><code>python simulator/simulate_picow.py --devices 3</code></pre>
+      </div>
+
+      <div id="overview-content">
+        <div class="kpis" id="kpis"></div>
+
+        <div class="charts">
+          <figure class="card chart-card wide" data-chart="temperature">
+            <figcaption>
+              <div>
+                <h2>Temperature</h2>
+                <p class="subtitle">°C · air and dew point</p>
+              </div>
+              <div class="legend" aria-hidden="true">
+                <span><i class="key" style="--key: var(--series-1)"></i>Air</span>
+                <span><i class="key" style="--key: var(--series-2)"></i>Dew point</span>
+              </div>
+              <button class="table-toggle" type="button" aria-pressed="false">Table</button>
+            </figcaption>
+            <div class="chart" role="img"></div>
+            <div class="chart-table" hidden></div>
+          </figure>
+          <figure class="card chart-card" data-chart="humidity">
+            <figcaption>
+              <div>
+                <h2>Relative humidity</h2>
+                <p class="subtitle">%</p>
+              </div>
+              <button class="table-toggle" type="button" aria-pressed="false">Table</button>
+            </figcaption>
+            <div class="chart" role="img"></div>
+            <div class="chart-table" hidden></div>
+          </figure>
+          <figure class="card chart-card" data-chart="pressure">
+            <figcaption>
+              <div>
+                <h2>Barometric pressure</h2>
+                <p class="subtitle">hPa</p>
+              </div>
+              <button class="table-toggle" type="button" aria-pressed="false">Table</button>
+            </figcaption>
+            <div class="chart" role="img"></div>
+            <div class="chart-table" hidden></div>
+          </figure>
+        </div>
+
+        <div class="lower">
+          <section class="card device-card" id="device-card" aria-labelledby="device-card-title"></section>
+          <section class="card readings-card" aria-labelledby="readings-title">
+            <header class="card-header">
+              <h2 id="readings-title">Latest readings</h2>
+              <p class="subtitle">Newest first, as received</p>
+            </header>
+            <div class="table-scroll" id="latest-table"></div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <!-- Devices: every board ever seen -->
+    <section class="view" id="view-devices" aria-labelledby="devices-title" hidden>
+      <div class="view-header">
+        <h1 id="devices-title">Devices</h1>
+        <p class="subtitle">Every board that has sent data. Select one to open its overview.</p>
+      </div>
+      <div class="card table-scroll" id="devices-table"></div>
+    </section>
+
+    <!-- Pipeline: how the data flows, and whether each stage is healthy -->
+    <section class="view" id="view-pipeline" aria-labelledby="pipeline-title" hidden>
+      <div class="view-header">
+        <h1 id="pipeline-title">Pipeline</h1>
+        <p class="subtitle" id="pipeline-subtitle">How a reading travels from the sensor to this page.</p>
+      </div>
+      <ol class="flow" id="flow"></ol>
+      <div class="pipeline-lower">
+        <section class="card" id="host-card" aria-labelledby="host-title"></section>
+        <section class="card" id="storage-card" aria-labelledby="storage-title"></section>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span id="version"></span>
+    <a href="api/docs" target="_blank" rel="noopener">API</a>
+    <a href="https://github.com/mpavanetti/iot" target="_blank" rel="noopener">GitHub</a>
+  </footer>
+
+  <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
+
+  <!-- Icons -->
+  <svg xmlns="http://www.w3.org/2000/svg" hidden>
+    <symbol id="icon-chip" viewBox="0 0 32 32">
+      <rect x="8" y="8" width="16" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="2"/>
+      <circle cx="16" cy="16" r="3" fill="currentColor"/>
+      <path d="M12 4v4M16 4v4M20 4v4M12 24v4M16 24v4M20 24v4M4 12h4M4 16h4M4 20h4M24 12h4M24 16h4M24 20h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="icon-theme" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/>
+    </symbol>
+    <symbol id="icon-download" viewBox="0 0 24 24">
+      <path d="M12 4v11m0 0l-4.5-4.5M12 15l4.5-4.5M5 19h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="icon-external" viewBox="0 0 24 24">
+      <path d="M14 5h5v5M19 5l-8 8M17 14v5H5V7h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="icon-check" viewBox="0 0 16 16">
+      <path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="icon-cross" viewBox="0 0 16 16">
+      <path d="M4.5 4.5l7 7m0-7l-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="icon-minus" viewBox="0 0 16 16">
+      <path d="M4 8h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="icon-warn" viewBox="0 0 16 16">
+      <path d="M8 4v5M8 11.5v.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+  </svg>
+
+  <script src="assets/vendor/uPlot.iife.min.js"></script>
+  <script type="module" src="assets/js/main.js"></script>
+</body>
+</html>

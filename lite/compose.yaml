@@ -1,0 +1,32 @@
+# IoT Center Lite in Docker: one container, one SQLite file.
+#
+#   docker compose up -d --build                                  (from this folder)
+#   docker compose -f compose.yaml -f compose.usb.yaml up -d      (Pico W plugged in over USB)
+#
+# Or skip Docker entirely: `pip install ".[lite]"` then `iotcenter lite` (see lite/README.md).
+
+name: iotcenter-lite
+
+services:
+  lite:
+    build:
+      context: ..
+      args:
+        EXTRAS: lite
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-8000}:8000"     # dashboard
+      - "${DEVICE_PORT:-1500}:1500"  # Pico W firmware sends readings here (TCP)
+    environment:
+      IOT_RETENTION_DAYS: ${RETENTION_DAYS:-30}  # raw readings; hourly aggregates stay forever
+      IOT_TCP_PORT: "1500"
+    volumes:
+      - lite-data:/data  # the SQLite database lives here
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+volumes:
+  lite-data:

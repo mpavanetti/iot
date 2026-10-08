@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  python:
+    name: Lint and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+      - run: pip install -e ".[dev]"
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: pytest
+
+  spark:
+    name: Spark jobs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: make test-spark
+
+  docker:
+    name: Images and Compose files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: docker compose -f platform/compose.yaml config --quiet
+      - run: docker compose -f lite/compose.yaml -f lite/compose.usb.yaml config --quiet
+      - run: docker build --build-arg EXTRAS=lite -t iotcenter-lite .
+      - run: docker run --rm iotcenter-lite iotcenter --version

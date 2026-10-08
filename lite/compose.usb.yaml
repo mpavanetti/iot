@@ -1,0 +1,10 @@
+# Overlay: also read a Pico W plugged in over USB.
+#   docker compose -f compose.yaml -f compose.usb.yaml up -d
+# Find the device with `ls /dev/ttyACM*` (Linux/Raspberry Pi); set SERIAL_DEVICE if not ACM0.
+
+services:
+  lite:
+    devices:
+      - "${SERIAL_DEVICE:-/dev/ttyACM0}:/dev/ttyACM0"
+    environment:
+      IOT_SERIAL_PORT: /dev/ttyACM0
