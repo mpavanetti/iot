@@ -55,6 +55,10 @@ READING_SCHEMA = StructType(
         StructField("wifi_rssi_dbm", IntegerType()),
         StructField("ip", StringType()),
         StructField("firmware", StringType()),
+        StructField("cpu_busy_pct", DoubleType()),
+        StructField("loop_max_ms", IntegerType()),
+        StructField("sensor_errors", IntegerType()),
+        StructField("boot_reason", StringType()),
     ]
 )
 
@@ -79,6 +83,10 @@ READING_COLUMNS = [
     "wifi_rssi_dbm",
     "ip",
     "firmware",
+    "cpu_busy_pct",
+    "loop_max_ms",
+    "sensor_errors",
+    "boot_reason",
     "kafka_partition",
     "kafka_offset",
 ]

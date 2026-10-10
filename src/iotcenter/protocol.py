@@ -27,6 +27,11 @@ PROTOCOL_VERSION = 2
 # Lines longer than this are rejected; a real reading is ~400 bytes.
 MAX_LINE_BYTES = 16 * 1024
 
+# A host reading a board over USB writes a host line to it every few seconds. It tells the
+# board that USB is being read (the board then keeps Wi-Fi off) and what time it is (without
+# Wi-Fi the board has no NTP). At the MicroPython REPL it is a comment, so it is harmless.
+HOST_LINE_PREFIX = "#iot "
+
 
 class InvalidMessage(ValueError):
     """A line that cannot be turned into a valid `Reading`."""
@@ -59,6 +64,10 @@ class Reading(BaseModel):
     wifi_rssi_dbm: int | None = Field(default=None, ge=-127, le=0)
     ip: str | None = Field(default=None, max_length=45)
     firmware: str | None = Field(default=None, max_length=32)
+    cpu_busy_pct: float | None = Field(default=None, ge=0, le=100)  # main loop, since last reading
+    loop_max_ms: int | None = Field(default=None, ge=0)  # longest loop pass: stalls show here
+    sensor_errors: int | None = Field(default=None, ge=0)  # BME280 read failures since boot
+    boot_reason: str | None = Field(default=None, max_length=32)  # "power on" or "watchdog"
 
     # Stamped by the server that received the line
     received_at: datetime
@@ -95,6 +104,15 @@ class Reading(BaseModel):
         record["received_at"] = self.received_at.timestamp()
         record["event_time"] = self.event_time.timestamp()
         return record
+
+
+def host_line(now: float) -> bytes:
+    """The line a host writes to a board on USB, e.g. b'#iot {"now": 1791480000}\\n'.
+
+    Whole seconds on purpose: MicroPython's floats are 32-bit on the Pico, which would round
+    a Unix time to the nearest 128 seconds. Integers are exact.
+    """
+    return f"{HOST_LINE_PREFIX}{json.dumps({'now': round(now)})}\n".encode()
 
 
 def dew_point(temperature_c: float, humidity_pct: float) -> float:

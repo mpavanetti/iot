@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -24,6 +25,7 @@ from ..config import Settings
 from ..hub import LiveHub
 from ..ingest import IngestStats, LineProcessor, SerialIngest, TcpIngestServer
 from ..protocol import Reading
+from ..status import lan_ip
 from ..sysinfo import host_metrics
 from .storage import Storage
 
@@ -41,6 +43,7 @@ class LiteSource:
         self.hub = hub
         self.stats = stats
         self.offline_after_s = settings.offline_after_s
+        self.altitude_m = settings.altitude_m
 
     @property
     def ingest_port(self) -> int | None:
@@ -61,6 +64,9 @@ class LiteSource:
     async def status(self) -> dict[str, Any]:
         stats, settings = self.stats, self.settings
         db = await asyncio.to_thread(self.storage.stats)
+        growth = await asyncio.to_thread(
+            self.storage.growth, settings.retention_days, settings.hourly_retention_days
+        )
         components = [
             {
                 "id": "tcp",
@@ -73,7 +79,7 @@ class LiteSource:
             {
                 "id": "usb",
                 "name": "USB serial",
-                "role": "Reads NDJSON from a board plugged in over USB",
+                "role": "Reads NDJSON from a board on USB, its primary link (Wi-Fi off)",
                 "status": _status(bool(settings.serial_port), stats.serial_connected),
                 "detail": settings.serial_port or "enable with --serial /dev/ttyACM0",
                 "metrics": {},
@@ -111,7 +117,12 @@ class LiteSource:
             "edition": self.edition,
             "generated_at": time.time(),
             "components": components,
-            "storage": {"title": "SQLite", "subtitle": str(settings.db_path), **db},
+            "storage": {
+                "title": "SQLite",
+                "subtitle": str(settings.db_path),
+                **db,
+                "forecast": growth,
+            },
             "host": host_metrics(str(settings.db_path.resolve().parent)),
         }
 
@@ -151,8 +162,16 @@ def create_lite_app(settings: Settings | None = None) -> FastAPI:
         for reader in readers:
             await reader.start()
         app.state.readers = readers
-        retention = asyncio.create_task(_retention_loop(storage, settings.retention_days))
-        log.info("Dashboard on http://%s:%s", settings.http_host, settings.http_port)
+        retention = asyncio.create_task(
+            _retention_loop(storage, settings.retention_days, settings.hourly_retention_days)
+        )
+        port = settings.http_port
+        if os.path.exists("/.dockerenv"):  # the published port is only known outside
+            log.info("Dashboard on port %s in the container; `make lite-status` shows links", port)
+        else:
+            log.info(
+                "Dashboard on http://localhost:%s (network: http://%s:%s)", port, lan_ip(), port
+            )
         try:
             yield
         finally:
@@ -166,13 +185,27 @@ def create_lite_app(settings: Settings | None = None) -> FastAPI:
     return app
 
 
-async def _retention_loop(storage: Storage, retention_days: int) -> None:
-    """Hourly: drop raw readings past the retention window (aggregates are kept)."""
-    if retention_days <= 0:
+async def _retention_loop(storage: Storage, retention_days: int, hourly_days: int) -> None:
+    """Hourly: drop raw readings and hourly aggregates past their retention windows, then
+    give the space back to the disk. A retention of 0 keeps that tier forever."""
+    if retention_days <= 0 and hourly_days <= 0:
         return
     while True:
-        cutoff = time.time() - retention_days * 86_400
-        deleted = await asyncio.to_thread(storage.purge, cutoff)
-        if deleted:
-            log.info("Retention: removed %s readings older than %s days", deleted, retention_days)
+        now = time.time()
+        raw = hourly = 0
+        if retention_days > 0:
+            raw = await asyncio.to_thread(storage.purge, now - retention_days * 86_400)
+        if hourly_days > 0:
+            hourly = await asyncio.to_thread(storage.purge_hourly, now - hourly_days * 86_400)
+        if raw or hourly:
+            freed = await asyncio.to_thread(storage.reclaim)
+            log.info(
+                "Retention: removed %s readings (> %s days) and %s hourly rows (> %s days); "
+                "%.1f MB back to the disk",
+                raw,
+                retention_days,
+                hourly,
+                hourly_days,
+                freed / 1e6,
+            )
         await asyncio.sleep(3600)

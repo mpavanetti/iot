@@ -28,11 +28,13 @@ class Settings(BaseSettings):
 
     # --- Lite storage ---------------------------------------------------------------------
     db_path: Path = Path("data/iot-lite.db")
-    retention_days: int = 30  # raw readings; hourly aggregates are kept forever. 0 = forever
+    retention_days: int = 30  # raw readings (every message). 0 = forever
+    hourly_retention_days: int = 730  # hourly aggregates (the 7d to 1y charts). 0 = forever
 
     # --- Dashboard ------------------------------------------------------------------------
     offline_after_s: float = 30.0  # a device is "offline" after this long without data
-    timezone: str = "UTC"  # how Streamlit shows times, e.g. America/Edmonton (browsers use local)
+    altitude_m: float | None = None  # of the sensors: shows sea-level pressure (e.g. 1045)
+    timezone: str = "UTC"  # how Streamlit shows times, e.g. America/New_York (browsers use local)
 
     # --- Platform -------------------------------------------------------------------------
     kafka_bootstrap: str = "localhost:9094"
@@ -48,7 +50,7 @@ class Settings(BaseSettings):
     spark_public_port: int = 8080
     spark_app_public_port: int = 4040
 
-    @field_validator("serial_port", mode="before")
+    @field_validator("serial_port", "altitude_m", mode="before")
     @classmethod
     def _blank_is_none(cls, value: str | None) -> str | None:
         return value or None

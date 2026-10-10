@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import time
 
 import pytest
 
@@ -92,6 +93,22 @@ async def test_tcp_reports_invalid_lines_and_keeps_the_connection(tcp_server, ma
     writer.close()
 
 
+async def test_tcp_turns_away_http_requests_without_counting_them(tcp_server, make_line):
+    # Port scanners and service discovery probe the device port with HTTP now and then.
+    server, collector = tcp_server
+    reader, writer = await asyncio.open_connection("127.0.0.1", server.port)
+    writer.write(b"GET / HTTP/1.1\r\nHost: iotcenter.local:1500\r\nAccept: */*\r\n\r\n")
+    await writer.drain()
+    assert await asyncio.wait_for(reader.read(), 2) == b""  # closed, no reply
+    writer.close()
+    _, writer = await asyncio.open_connection("127.0.0.1", server.port)
+    writer.write(make_line(seq=1))
+    await writer.drain()
+    await collector.wait_for(1)
+    assert collector.invalid == [] and collector.stats.messages_invalid == 0
+    writer.close()
+
+
 async def test_tcp_drops_connections_that_send_huge_lines(tcp_server):
     server, collector = tcp_server
     reader, writer = await asyncio.open_connection("127.0.0.1", server.port)
@@ -123,6 +140,23 @@ async def test_serial_reads_json_lines_and_skips_device_logs(make_line):
         await reader.stop()
         os.close(controller)
         os.close(device)
+
+
+async def test_serial_tells_the_board_a_host_is_listening():
+    # The board keeps USB as its link (Wi-Fi off) while these lines arrive, and sets its clock.
+    controller, device = os.openpty()
+    reader = SerialIngest(os.ttyname(device), 115200, Collector().processor)
+    await reader.start()
+    try:
+        data = await asyncio.wait_for(asyncio.to_thread(os.read, controller, 1024), 3)
+    finally:
+        await reader.stop()
+        os.close(controller)
+        os.close(device)
+    line = data.split(b"\n")[0]
+    assert line.startswith(b"#iot ")
+    now = json.loads(line[5:])["now"]
+    assert isinstance(now, int) and now == pytest.approx(time.time(), abs=5)
 
 
 async def test_serial_retries_until_the_port_appears():

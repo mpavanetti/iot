@@ -24,6 +24,10 @@ CREATE TABLE readings (
     wifi_rssi_dbm   integer,
     ip              text,
     firmware        text,
+    cpu_busy_pct    double precision,           -- board's main loop, since its last reading
+    loop_max_ms     integer,                    -- its longest loop pass
+    sensor_errors   integer,                    -- BME280 read failures since boot
+    boot_reason     text,                       -- power on | watchdog
     kafka_partition integer,                    -- lineage: where Spark read it from
     kafka_offset    bigint,
     processed_at    timestamptz      NOT NULL DEFAULT now(),

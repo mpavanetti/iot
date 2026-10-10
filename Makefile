@@ -4,11 +4,18 @@ PYTHON ?= python3
 VENV ?= .venv
 BIN := $(VENV)/bin
 PLATFORM := docker compose -f platform/compose.yaml
-LITE := docker compose -f lite/compose.yaml
+# Prints the links, pipeline health and boards of the edition whose dashboard is published by
+# $(1) (a compose command) for service $(2). Stdlib only, so any Python 3 can run it. $(3): extra flags.
+status = port=$$($(1) port $(2) 8000 2>/dev/null | head -1 | cut -d: -f2); \
+	if [ -z "$$port" ]; then echo "Not running."; exit 1; fi; \
+	$(PYTHON) src/iotcenter/status.py http://localhost:$$port $(3)
+# Lite runs from lite/, so lite/.env (and a COMPOSE_FILE set there) applies
+LITE := cd lite && docker compose
 SIMULATOR := $(PYTHON) simulator/simulate_picow.py
 
 .DEFAULT_GOAL := help
-.PHONY: help install lite lite-docker simulate backfill platform-up platform-down \
+.PHONY: help install lite lite-docker lite-docker-usb lite-down lite-status firmware simulate backfill \
+        platform-up platform-status platform-down platform-purge \
         platform-logs platform-reset tools rebuild-hourly test test-spark e2e lint format
 
 help: ## List the available tasks
@@ -26,6 +33,34 @@ lite: ## Run IoT Center Lite locally (dashboard :8000, devices :1500)
 
 lite-docker: ## Run IoT Center Lite in Docker
 	$(LITE) up -d --build
+	@$(call status,$(LITE),lite,--wait 120)
+
+lite-docker-usb: ## Run IoT Center Lite in Docker, also reading a Pico W on USB
+	$(LITE) -f compose.yaml -f compose.usb.yaml up -d --build
+	@$(call status,$(LITE),lite,--wait 120)
+
+lite-down: ## Stop Lite in Docker (data is kept)
+	$(LITE) down
+
+lite-status: ## Links, pipeline health and boards of Lite in Docker
+	@$(call status,$(LITE),lite)
+
+# --- Firmware -------------------------------------------------------------------------------
+
+# The board's USB serial port: its stable name on Linux, else mpremote's own search
+PICO_PORT ?= $(or $(firstword $(wildcard /dev/serial/by-id/usb-MicroPython*)),auto)
+
+firmware: ## Upload firmware/ to a Pico W on USB (pauses Lite in Docker, which shares the port)
+	@if [ "$(PICO_PORT)" != auto ] && ! [ -r "$(PICO_PORT)" -a -w "$(PICO_PORT)" ]; then \
+	  echo "Cannot open the Pico W ($(PICO_PORT)): this shell is not in the dialout group yet."; \
+	  echo "  Now:     sg dialout -c 'make firmware'"; \
+	  echo "  For good: log out and in (VS Code: run 'Remote-SSH: Kill VS Code Server on Host', then reconnect)"; \
+	  exit 1; \
+	fi
+	-$(LITE) stop
+	cd firmware && $(CURDIR)/$(BIN)/mpremote connect $(PICO_PORT) cp -r lib : + \
+	  cp config.py main.py telemetry.py link.py hardware.py : + reset; \
+	  status=$$?; cd $(CURDIR)/lite && docker compose start; exit $$status
 
 # --- Simulated boards -----------------------------------------------------------------------
 
@@ -39,6 +74,10 @@ backfill: ## Send a week of simulated history to localhost:1500
 
 platform-up: ## Build and start the platform
 	$(PLATFORM) up -d --build
+	@$(call status,$(PLATFORM),web,--wait 180)
+
+platform-status: ## Links, pipeline health and boards of the platform
+	@$(call status,$(PLATFORM),web)
 
 platform-down: ## Stop the platform (data is kept)
 	$(PLATFORM) down
@@ -48,6 +87,9 @@ platform-logs: ## Follow the platform's logs
 
 platform-reset: ## Stop the platform and delete all of its data
 	$(PLATFORM) down -v
+
+platform-purge: ## Delete the platform completely: containers, data and images (Lite is kept)
+	$(PLATFORM) --profile '*' down -v --rmi all --remove-orphans
 
 tools: ## Start Kafka UI on :8090
 	$(PLATFORM) --profile tools up -d kafka-ui

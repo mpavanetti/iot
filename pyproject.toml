@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "iotcenter"
-version = "2.0.0"
+version = "2.1.0"
 description = "Pico W + BME280 sensor pipeline: a single-process Lite edition (TCP/USB -> SQLite -> live dashboard) and a Kafka/Spark/PostgreSQL/Streamlit platform."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -39,6 +39,7 @@ analytics = [
 ]
 dev = [
     "iotcenter[platform,analytics]",
+    "mpremote>=1.29",  # make firmware: upload to the Pico W
     "pytest>=9.1",
     "pytest-asyncio>=1.4",
     "ruff>=0.16",

@@ -99,11 +99,37 @@ function renderStorage(storage) {
     ["Oldest reading", storage.oldest ? `${dateTime(storage.oldest)} (${ago(storage.oldest)})` : "–"],
     ["Newest reading", storage.newest ? `${dateTime(storage.newest)} (${ago(storage.newest)})` : "–"],
     ["Size on disk", bytes(storage.size_bytes)],
+    ...forecastFacts(storage.forecast),
   ];
   card.replaceChildren(
     el("header", {}, el("h2", { id: "storage-title" }, storage.title || "Storage"), el("p", { class: "subtitle" }, storage.subtitle || "Where history lives")),
     el("dl", { class: "facts" }, facts.flatMap(([label, value]) => [el("dt", {}, label), el("dd", {}, value)])),
   );
+}
+
+/** The retention policy, and how big the database gets at the pace of the last hour (Lite). */
+function forecastFacts(forecast) {
+  if (!forecast) return [];
+  const day = (epoch) => new Date(epoch * 1000).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  const kept = (days) => (days <= 0 ? "forever" : days % 365 === 0 ? `${days / 365} year${days === 365 ? "" : "s"}` : `${days} days`);
+  const facts = [
+    ["Kept", `raw readings ${kept(forecast.retention_days)}, hourly averages ${kept(forecast.hourly_retention_days)}`],
+    [
+      "Growing",
+      forecast.readings_per_day
+        ? `${bytes(forecast.growth_bytes_per_day)} a day (${integer(forecast.readings_per_day)} readings)`
+        : "not now: no readings in the last hour",
+    ],
+  ];
+  if (forecast.levels_off_bytes != null) {
+    facts.push([
+      "Levels off at",
+      `about ${bytes(forecast.levels_off_bytes)}: ${bytes(forecast.raw_bytes)} of raw readings (full by ${day(forecast.raw_full_at)}) and ${bytes(forecast.hourly_bytes)} of hourly averages`,
+    ]);
+  } else {
+    facts.push(["Levels off", "never: a retention of 0 keeps that data forever"]);
+  }
+  return facts;
 }
 
 function gauge(label, pct, text) {

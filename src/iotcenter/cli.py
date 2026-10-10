@@ -5,6 +5,7 @@
     iotcenter web         Platform: dashboard (live from Kafka, history from PostgreSQL)
     iotcenter analytics   Platform: Streamlit analytics app
     iotcenter ports       List serial ports, to find a Pico W plugged in over USB
+    iotcenter status      Where IoT Center is reachable, and how each part is doing
 
 Settings come from IOT_* environment variables (see config.py); flags override them.
 """
@@ -39,6 +40,9 @@ def main(argv: list[str] | None = None) -> None:
     lite.add_argument("--baud", type=int, help="serial baud rate (default 115200)")
     lite.add_argument("--db", type=Path, help="SQLite file (default data/iot-lite.db)")
     lite.add_argument("--retention-days", type=int, help="days of raw readings to keep (0 = all)")
+    lite.add_argument(
+        "--hourly-retention-days", type=int, help="days of hourly aggregates to keep (0 = all)"
+    )
 
     gateway = commands.add_parser("gateway", help="run the platform gateway (devices -> Kafka)")
     gateway.add_argument("--serial", metavar="PORT", help="also read a USB serial port")
@@ -47,6 +51,9 @@ def main(argv: list[str] | None = None) -> None:
     analytics = commands.add_parser("analytics", help="run the Streamlit analytics app")
     analytics.add_argument("--port", type=int, default=8501)
     commands.add_parser("ports", help="list serial ports")
+    status = commands.add_parser("status", help="links, pipeline health and boards")
+    status.add_argument("url", nargs="?", default="http://localhost:8000", help="the dashboard")
+    status.add_argument("--wait", type=float, default=0, metavar="S", help="wait for it to start")
 
     args = parser.parse_args(argv)
     logging.basicConfig(
@@ -66,6 +73,7 @@ def main(argv: list[str] | None = None) -> None:
             baud="serial_baud",
             db="db_path",
             retention_days="retention_days",
+            hourly_retention_days="hourly_retention_days",
         )
         if args.no_tcp:
             settings.tcp_enabled = False
@@ -87,6 +95,10 @@ def main(argv: list[str] | None = None) -> None:
         run_streamlit(args.port)
     elif args.command == "ports":
         _list_ports()
+    elif args.command == "status":
+        from .status import main as status_main
+
+        sys.exit(status_main([args.url, "--wait", str(args.wait)]))
 
 
 def _apply(settings: Settings, args: argparse.Namespace, **mapping: str) -> None:

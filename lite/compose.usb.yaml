@@ -1,10 +1,17 @@
 # Overlay: also read a Pico W plugged in over USB.
 #   docker compose -f compose.yaml -f compose.usb.yaml up -d
-# Find the device with `ls /dev/ttyACM*` (Linux/Raspberry Pi); set SERIAL_DEVICE if not ACM0.
+#
+# The host's /dev is mounted read-only at /hostdev, so the board can be plugged in, unplugged
+# or rebooted at any time (a fixed `devices:` entry would keep the container from starting
+# while the board is unplugged). Only USB serial ports (ttyACM*, major number 166) may be opened.
+# SERIAL_DEVICE is the path under /dev: ttyACM0 by default, or a stable name from
+# `ls /dev/serial/by-id`, e.g. serial/by-id/usb-MicroPython_Board_in_FS_mode_<id>-if00.
 
 services:
   lite:
-    devices:
-      - "${SERIAL_DEVICE:-/dev/ttyACM0}:/dev/ttyACM0"
+    volumes:
+      - /dev:/hostdev:ro
+    device_cgroup_rules:
+      - "c 166:* rmw"
     environment:
-      IOT_SERIAL_PORT: /dev/ttyACM0
+      IOT_SERIAL_PORT: /hostdev/${SERIAL_DEVICE:-ttyACM0}

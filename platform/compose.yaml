@@ -22,6 +22,9 @@ x-python-service: &python-service
     IOT_SPARK_MASTER_URL: http://spark-master:8080
     IOT_ANALYTICS_URL: http://analytics:8501
     IOT_TIMEZONE: ${TIMEZONE:-UTC}
+    IOT_ALTITUDE_M: ${ALTITUDE_M:-}  # metres above sea level: the dashboard shows sea-level pressure
+    IOT_RETENTION_DAYS: ${RETENTION_DAYS:-30}  # readings in PostgreSQL (Kafka keeps 7 days); 0 = forever
+    IOT_HOURLY_RETENTION_DAYS: ${HOURLY_RETENTION_DAYS:-730}  # hourly aggregates; 0 = forever
     # Ports the browser uses for links between the UIs (must match the published ports)
     IOT_ANALYTICS_PUBLIC_PORT: ${ANALYTICS_PORT:-8501}
     IOT_SPARK_PUBLIC_PORT: ${SPARK_UI_PORT:-8080}

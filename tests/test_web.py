@@ -2,6 +2,8 @@
 
 import time
 
+import pytest
+
 from iotcenter.config import Settings
 from iotcenter.hub import LiveHub
 from iotcenter.web.app import PlatformSource
@@ -113,3 +115,29 @@ def test_gateway_and_kafka_status():
     kafka = s._kafka()
     assert kafka["metrics"] == {"messages produced": 120, "dead letters": 3}
     assert "humidity_pct" in kafka["note"]
+
+
+async def test_retention_purges_hourly_and_retries_when_postgres_is_down(monkeypatch):
+    import asyncio
+
+    from iotcenter.web import app as web_app
+
+    calls, sleeps = [], []
+
+    class Db:
+        async def purge(self, raw_days, hourly_days):
+            calls.append((raw_days, hourly_days))
+            if len(calls) == 1:
+                raise OSError("connection refused")  # PostgreSQL still starting
+            return 5, 1
+
+    async def sleep(seconds):
+        sleeps.append(seconds)
+        if len(sleeps) == 2:
+            raise asyncio.CancelledError
+
+    monkeypatch.setattr(web_app.asyncio, "sleep", sleep)
+    with pytest.raises(asyncio.CancelledError):
+        await web_app.retention_loop(Db(), 30, 730)
+    assert calls == [(30, 730), (30, 730)]
+    assert sleeps == [60, 3600]  # retry soon after a failure, then once an hour

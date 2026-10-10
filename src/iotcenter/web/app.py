@@ -43,6 +43,7 @@ class PlatformSource:
         self.kafka = kafka
         self.db = db
         self.offline_after_s = settings.offline_after_s
+        self.altitude_m = settings.altitude_m
         self.ingest_port = settings.tcp_port
         self.http = httpx.AsyncClient(timeout=2.0)
 
@@ -259,6 +260,29 @@ class PlatformSource:
             return None
 
 
+async def retention_loop(db: Database, retention_days: int, hourly_days: int) -> None:
+    """Hourly: drop readings and hourly aggregates past their retention windows, so the
+    PostgreSQL tables level off instead of growing forever (the same policy as Lite)."""
+    if retention_days <= 0 and hourly_days <= 0:
+        return
+    while True:
+        try:
+            raw, hourly = await db.purge(retention_days, hourly_days)
+        except Exception as exc:  # PostgreSQL still starting, or down: try again soon
+            log.warning("Retention: purge failed, retrying in a minute: %s", exc)
+            await asyncio.sleep(60)
+            continue
+        if raw or hourly:
+            log.info(
+                "Retention: removed %s readings (> %s days) and %s hourly rows (> %s days)",
+                raw,
+                retention_days,
+                hourly,
+                hourly_days,
+            )
+        await asyncio.sleep(3600)
+
+
 def create_web_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or Settings()
     hub = LiveHub()
@@ -276,10 +300,14 @@ def create_web_app(settings: Settings | None = None) -> FastAPI:
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await db.open()
         await kafka.start()
+        retention = asyncio.create_task(
+            retention_loop(db, settings.retention_days, settings.hourly_retention_days)
+        )
         log.info("Dashboard on http://%s:%s", settings.http_host, settings.http_port)
         try:
             yield
         finally:
+            retention.cancel()
             hub.close()
             await kafka.stop()
             await db.close()

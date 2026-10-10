@@ -134,10 +134,42 @@ def test_live_stream_pushes_new_readings(lite, make_line):
     assert isinstance(reading["event_time"], float)
 
 
+def test_insights_from_three_hours_of_readings(lite, make_line):
+    now = time.time()
+    lines = [
+        make_line(
+            seq=i,
+            ts=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now - 3 * 3600 + i * 600)),
+            pressure_hpa=900.0 - i * 0.25,  # -4.5 hPa over 3 hours
+            humidity_pct=22.0,
+        )
+        for i in range(19)
+    ]
+    lite.send_tcp(*lines)
+    lite.wait_for_messages(19)
+    insights = lite.get("/api/insights", device_id="pico-test01").json()
+    assert insights["pressure_tendency"]["trend"] == "falling"
+    assert insights["comfort"]["label"] == "Dry"
+    assert insights["sea_level_pressure_hpa"] is None  # IOT_ALTITUDE_M not set
+
+
+def test_status_report_lists_links_pipeline_and_boards(lite, make_line):
+    from iotcenter.status import report
+
+    lite.send_tcp(make_line(seq=1, ts=None))
+    lite.wait_for_messages(1)
+    text = report(lite.url, color=False)
+    assert f"Dashboard       {lite.url}" in text
+    assert "✓ SQLite" in text and "✓ USB serial" in text
+    assert "bench  online via Wi-Fi" in text
+    assert "kept: raw readings 30 days, hourly averages 2 years" in text
+    assert "levels off at about" in text
+
+
 def test_info_status_and_dashboard(lite):
     info = lite.get("/api/info").json()
     assert info["edition"] == "lite"
-    assert info["ranges"] == ["1h", "6h", "24h", "7d", "30d"]
+    assert info["ranges"] == ["1h", "6h", "24h", "7d", "30d", "1y"]
 
     status = lite.get("/api/status").json()
     assert [c["id"] for c in status["components"]] == [

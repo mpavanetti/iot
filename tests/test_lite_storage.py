@@ -81,3 +81,55 @@ def test_purge_only_removes_old_raw_readings(storage, make_line):
     assert storage.purge(T0.timestamp() + 50) == 1
     assert [r["seq"] for r in storage.readings("pico-test01", 0, 2e9)] == [2]
     assert storage.devices()[0]["messages"] == 2  # counters are history, not current rows
+
+
+def test_forecast_has_a_ceiling_with_both_retentions():
+    from iotcenter.lite.storage import BYTES_PER_READING, forecast
+
+    one_board = forecast(43_200, 30, 730, oldest=1_000_000.0, devices=1)  # every 2 s
+    assert one_board["raw_bytes"] == 30 * 43_200 * BYTES_PER_READING  # ~262 MB
+    assert 2_500_000 < one_board["hourly_bytes"] < 3_200_000  # 2 years: ~2.9 MB
+    assert one_board["levels_off_bytes"] == one_board["raw_bytes"] + one_board["hourly_bytes"]
+    assert one_board["raw_full_at"] == 1_000_000.0 + 30 * 86_400
+    forever = forecast(43_200, 30, 0, oldest=None, devices=1)
+    assert forever["levels_off_bytes"] is None and forever["hourly_bytes"] is None
+
+
+def test_growth_uses_the_pace_of_the_last_hour(storage, make_line):
+    now = datetime.now(UTC)
+    for seq in range(10):  # ten readings in the last hour...
+        storage.insert(parse_line(make_line(seq=seq, ts=None), received_at=now))
+    yesterday = now - timedelta(days=1)  # ...and one from yesterday
+    storage.insert(parse_line(make_line(seq=10, ts=None), received_at=yesterday))
+    growth = storage.growth(retention_days=7, hourly_retention_days=730, now=now.timestamp() + 1)
+    assert growth["readings_per_day"] == 10 * 24
+    assert growth["raw_full_at"] == pytest.approx(yesterday.timestamp() + 7 * 86_400)
+
+
+def test_hourly_aggregates_are_purged_too(storage, make_line):
+    store(storage, make_line, seq=1)
+    store(storage, make_line, seq=2, offset_s=7200)
+    assert storage.purge_hourly(T0.timestamp() + 3600) == 1  # the first hour
+    assert storage.history("pico-test01", 0, 2e9, 3600)["samples"] == [1]
+
+
+def test_purged_space_goes_back_to_the_disk(tmp_path, make_line):
+    storage = Storage(tmp_path / "iot.db")
+    for seq in range(3000):
+        storage.insert(parse_line(make_line(seq=seq, ts=None), received_at=T0))
+    before = storage.path.stat().st_size  # the WAL is folded in when connections close
+    storage.purge(T0.timestamp() + 1)
+    assert storage.reclaim() > 0
+    assert storage.path.stat().st_size < before / 4
+
+
+def test_an_older_database_is_switched_to_incremental_vacuum(tmp_path):
+    import sqlite3
+
+    path = tmp_path / "old.db"
+    old = sqlite3.connect(path)  # as created by IoT Center 2.0: auto_vacuum off
+    old.execute("CREATE TABLE t (x)")
+    old.commit()
+    old.close()
+    Storage(path)
+    assert sqlite3.connect(path).execute("PRAGMA auto_vacuum").fetchone()[0] == 2

@@ -2,9 +2,14 @@
 
 Three tables (the same shape the platform keeps in PostgreSQL):
 
-  readings         every message, kept for `retention_days`
-  readings_hourly  per-device hourly aggregates, updated on each insert, kept forever
+  readings         every message, kept for `retention_days` (30)
+  readings_hourly  per-device hourly aggregates, updated on each insert, kept for
+                   `hourly_retention_days` (2 years)
   devices          one row per board: first/last seen, message counters, sequence gaps
+
+So the file has a ceiling: about 262 MB per board at one reading every 2 s with the defaults
+(see `forecast`). Purged space goes back to the disk (incremental vacuum), so lowering a
+retention also shrinks the file.
 
 Timestamps are stored as Unix seconds (REAL) so time bucketing is plain arithmetic.
 Methods are synchronous; the async app calls them through `asyncio.to_thread`.
@@ -13,6 +18,7 @@ Methods are synchronous; the async app calls them through `asyncio.to_thread`.
 from __future__ import annotations
 
 import sqlite3
+import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
@@ -43,6 +49,10 @@ CREATE TABLE IF NOT EXISTS readings (
     wifi_rssi_dbm   INTEGER,
     ip              TEXT,
     firmware        TEXT,
+    cpu_busy_pct    REAL,
+    loop_max_ms     INTEGER,
+    sensor_errors   INTEGER,
+    boot_reason     TEXT,
     PRIMARY KEY (device_id, event_time, seq)  -- a resent message is stored once
 ) WITHOUT ROWID;
 
@@ -74,6 +84,13 @@ CREATE TABLE IF NOT EXISTS devices (
 );
 """
 
+INCREMENTAL = 2  # PRAGMA auto_vacuum mode
+
+# Measured on disk with 1.3 million real readings (30 days at one every 2 s): the row and its
+# entry in readings_by_time. And a year of hourly aggregates for one board: 8,760 rows.
+BYTES_PER_READING = 202
+HOURLY_BYTES_PER_DEVICE_YEAR = 1_440_000
+
 # API metric name -> column prefix in readings_hourly
 HOURLY_PREFIX = {
     "temperature_c": "temperature",
@@ -103,6 +120,18 @@ READING_COLUMNS = (
     "wifi_rssi_dbm",
     "ip",
     "firmware",
+    "cpu_busy_pct",
+    "loop_max_ms",
+    "sensor_errors",
+    "boot_reason",
+)
+
+# Columns added after 2.0: a database created before gets them when it is opened.
+ADDED_COLUMNS = (
+    ("cpu_busy_pct", "REAL"),
+    ("loop_max_ms", "INTEGER"),
+    ("sensor_errors", "INTEGER"),
+    ("boot_reason", "TEXT"),
 )
 
 INSERT_READING = (
@@ -156,8 +185,17 @@ class Storage:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self._connect() as db:
+            if db.execute("PRAGMA auto_vacuum").fetchone()[0] != INCREMENTAL:
+                # Lets purges give space back. Instant on a new file; on an older one the
+                # VACUUM rewrites it once (seconds, even at full size).
+                db.execute(f"PRAGMA auto_vacuum={INCREMENTAL}")
+                db.execute("VACUUM")
             db.execute("PRAGMA journal_mode=WAL")  # readers never block the writer
             db.executescript(SCHEMA)
+            existing = {row["name"] for row in db.execute("PRAGMA table_info(readings)")}
+            for column, kind in ADDED_COLUMNS:
+                if column not in existing:
+                    db.execute(f"ALTER TABLE readings ADD COLUMN {column} {kind}")
 
     @contextmanager
     def _connect(self) -> Iterator[sqlite3.Connection]:
@@ -196,6 +234,19 @@ class Storage:
         """Delete raw readings older than `older_than` (hourly aggregates are kept)."""
         with self._connect() as db:
             return db.execute("DELETE FROM readings WHERE event_time < ?", (older_than,)).rowcount
+
+    def purge_hourly(self, older_than: float) -> int:
+        """Delete hourly aggregates of hours that started before `older_than`."""
+        with self._connect() as db:
+            return db.execute("DELETE FROM readings_hourly WHERE hour < ?", (older_than,)).rowcount
+
+    def reclaim(self) -> int:
+        """Give the space freed by purges back to the disk. Returns the bytes released."""
+        with self._connect() as db:
+            page_size = db.execute("PRAGMA page_size").fetchone()[0]
+            free = db.execute("PRAGMA freelist_count").fetchone()[0]
+            db.execute("PRAGMA incremental_vacuum").fetchall()  # frees one page per step
+        return free * page_size
 
     # --- reads ----------------------------------------------------------------------------
 
@@ -254,6 +305,21 @@ class Storage:
                     result[metric][stat].append(None if value is None else round(value, 2))
         return result
 
+    def growth(
+        self, retention_days: int, hourly_retention_days: int, now: float | None = None
+    ) -> dict[str, Any]:
+        """The storage forecast at the pace of the last hour (index lookups only: cheap)."""
+        now = now or time.time()
+        with self._connect() as db:
+            last_hour = db.execute(
+                "SELECT COUNT(*) FROM readings WHERE event_time >= ?", (now - 3600,)
+            ).fetchone()[0]
+            oldest = db.execute("SELECT MIN(event_time) FROM readings").fetchone()[0]
+            devices = db.execute(
+                "SELECT COUNT(*) FROM devices WHERE last_seen >= ?", (now - 86_400,)
+            ).fetchone()[0]
+        return forecast(last_hour * 24, retention_days, hourly_retention_days, oldest, devices)
+
     def stats(self) -> dict[str, Any]:
         with self._connect() as db:
             messages, device_count = db.execute(
@@ -276,6 +342,37 @@ class Storage:
             "newest": newest,
             "size_bytes": size,
         }
+
+
+def forecast(
+    per_day: float,
+    retention_days: int,
+    hourly_retention_days: int,
+    oldest: float | None,
+    devices: int,
+) -> dict[str, Any]:
+    """How big the database gets at `per_day` readings a day from `devices` boards. Each tier
+    levels off once its retention window is full; a retention of 0 (forever) never does."""
+    raw_per_day = per_day * BYTES_PER_READING
+    hourly_per_day = devices * HOURLY_BYTES_PER_DEVICE_YEAR / 365
+    result: dict[str, Any] = {
+        "readings_per_day": round(per_day),
+        "growth_bytes_per_day": round(raw_per_day + hourly_per_day),
+        "retention_days": retention_days,
+        "hourly_retention_days": hourly_retention_days,
+        "raw_bytes": None,  # the ceiling of each tier
+        "hourly_bytes": None,
+        "levels_off_bytes": None,  # the ceiling of the whole file
+        "raw_full_at": None,  # when the raw window is full (most of the ceiling)
+    }
+    if retention_days > 0:
+        result["raw_bytes"] = round(raw_per_day * retention_days)
+        result["raw_full_at"] = (oldest or time.time()) + retention_days * 86_400
+    if hourly_retention_days > 0:
+        result["hourly_bytes"] = round(hourly_per_day * hourly_retention_days)
+    if retention_days > 0 and hourly_retention_days > 0:
+        result["levels_off_bytes"] = result["raw_bytes"] + result["hourly_bytes"]
+    return result
 
 
 def reading_row(reading: Reading) -> dict[str, Any]:

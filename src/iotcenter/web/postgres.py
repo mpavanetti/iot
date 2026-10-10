@@ -18,7 +18,7 @@ EPOCH = "TIMESTAMPTZ 'epoch'"
 READING = """
 SELECT device_id, name, seq, source, temperature_c, humidity_pct, pressure_hpa, dew_point_c,
        cpu_temp_c, mem_free_bytes, mem_alloc_bytes, storage_free_kb, cpu_freq_mhz, uptime_s,
-       wifi_rssi_dbm, ip, firmware,
+       wifi_rssi_dbm, ip, firmware, cpu_busy_pct, loop_max_ms, sensor_errors, boot_reason,
        extract(epoch FROM event_time)::float8  AS event_time,
        extract(epoch FROM ts)::float8          AS ts,
        extract(epoch FROM received_at)::float8 AS received_at
@@ -94,6 +94,10 @@ FROM stream_progress
 """
 
 
+PURGE_READINGS = "DELETE FROM readings WHERE event_time < now() - make_interval(days => %(days)s)"
+PURGE_HOURLY = "DELETE FROM readings_hourly WHERE hour < now() - make_interval(days => %(days)s)"
+
+
 class Database:
     def __init__(self, url: str) -> None:
         self.pool = AsyncConnectionPool(
@@ -110,6 +114,18 @@ class Database:
 
     async def close(self) -> None:
         await self.pool.close()
+
+    async def purge(self, retention_days: int, hourly_retention_days: int) -> tuple[int, int]:
+        """Delete readings and hourly aggregates past their retention (0 keeps that forever).
+        Returns how many rows went. Autovacuum then reuses the space: the tables level off."""
+        raw = hourly = 0
+        async with self.pool.connection() as conn:
+            if retention_days > 0:
+                raw = (await conn.execute(PURGE_READINGS, {"days": retention_days})).rowcount
+            if hourly_retention_days > 0:
+                params = {"days": hourly_retention_days}
+                hourly = (await conn.execute(PURGE_HOURLY, params)).rowcount
+        return raw, hourly
 
     async def fetch(self, sql: str, params: dict[str, Any] | None = None) -> list[dict]:
         async with self.pool.connection() as conn:

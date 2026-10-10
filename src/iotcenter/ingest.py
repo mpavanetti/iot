@@ -10,13 +10,19 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import re
 import time
 from collections.abc import Awaitable, Callable
 from dataclasses import asdict, dataclass
 
-from .protocol import MAX_LINE_BYTES, InvalidMessage, Reading, parse_line
+from .protocol import MAX_LINE_BYTES, InvalidMessage, Reading, host_line, parse_line
 
 log = logging.getLogger(__name__)
+
+HOST_LINE_EVERY_S = 5.0  # boards fall back to Wi-Fi after 15 s without a host line
+
+# "GET / HTTP/1.1": a browser, a port scanner or a dashboard's service discovery, not a board.
+HTTP_REQUEST = re.compile(rb"^[A-Z]{3,7} \S+ HTTP/\d")
 
 OnReading = Callable[[Reading], Awaitable[None]]
 OnInvalid = Callable[[bytes, str, str], Awaitable[None]]  # (raw line, reason, source)
@@ -111,6 +117,7 @@ class TcpIngestServer:
         stats.tcp_connections_open += 1
         stats.tcp_connections_total += 1
         log.info("Device connected from %s", peer_name)
+        first = True
         try:
             while True:
                 try:
@@ -122,6 +129,12 @@ class TcpIngestServer:
                     break
                 if not line:  # EOF: the device closed the connection
                     break
+                if first and HTTP_REQUEST.match(line):
+                    log.info(
+                        "HTTP request from %s on the device port: not a board, closing", peer_name
+                    )
+                    break
+                first = False
                 if line.strip():
                     await self.processor.process(line, "tcp")
         except (ConnectionError, asyncio.IncompleteReadError):
@@ -139,6 +152,9 @@ class SerialIngest:
     pyserial is blocking, so each read runs in a worker thread. Lines that are not JSON
     objects (MicroPython boot banners, print() logs) are skipped. When the board is
     unplugged or reboots, the port disappears; we simply retry until it comes back.
+
+    While the port is open, a host line goes to the board every few seconds: the firmware
+    then keeps USB as its link (Wi-Fi off) and sets its clock from it.
     """
 
     def __init__(self, port: str, baudrate: int, processor: LineProcessor) -> None:
@@ -165,7 +181,9 @@ class SerialIngest:
         stats = self.processor.stats
         while not self._stopping:
             try:
-                port = await asyncio.to_thread(serial.Serial, self.port, self.baudrate, timeout=1)
+                port = await asyncio.to_thread(
+                    serial.Serial, self.port, self.baudrate, timeout=1, write_timeout=2
+                )
             except (serial.SerialException, OSError) as exc:
                 stats.serial_connected = False
                 stats.last_error = f"{self.port}: {exc}"
@@ -173,6 +191,7 @@ class SerialIngest:
                 continue
             log.info("Reading device data from serial port %s", self.port)
             stats.serial_connected = True
+            announce = asyncio.create_task(self._announce(port))
             try:
                 while not self._stopping:
                     line = await asyncio.to_thread(port.readline)  # b"" after a 1 s timeout
@@ -181,5 +200,19 @@ class SerialIngest:
             except (serial.SerialException, OSError) as exc:
                 log.warning("Serial port %s lost: %s", self.port, exc)
             finally:
+                announce.cancel()
                 stats.serial_connected = False
                 port.close()
+
+    async def _announce(self, port) -> None:
+        """Write a host line now and every few seconds while the port is open."""
+        import serial
+
+        while True:
+            try:
+                await asyncio.to_thread(port.write, host_line(time.time()))
+            except serial.SerialTimeoutException:
+                pass  # the board is not reading its USB input (older firmware): harmless
+            except (serial.SerialException, OSError):
+                return  # the port is gone; the reader notices and reopens it
+            await asyncio.sleep(HOST_LINE_EVERY_S)

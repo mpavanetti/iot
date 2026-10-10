@@ -18,7 +18,9 @@ services:
       - "${WEB_PORT:-8000}:8000"     # dashboard
       - "${DEVICE_PORT:-1500}:1500"  # Pico W firmware sends readings here (TCP)
     environment:
-      IOT_RETENTION_DAYS: ${RETENTION_DAYS:-30}  # raw readings; hourly aggregates stay forever
+      IOT_RETENTION_DAYS: ${RETENTION_DAYS:-30}  # raw readings (every message); 0 = forever
+      IOT_HOURLY_RETENTION_DAYS: ${HOURLY_RETENTION_DAYS:-730}  # hourly averages; 0 = forever
+      IOT_ALTITUDE_M: ${ALTITUDE_M:-}  # metres above sea level: shows sea-level pressure
       IOT_TCP_PORT: "1500"
     volumes:
       - lite-data:/data  # the SQLite database lives here

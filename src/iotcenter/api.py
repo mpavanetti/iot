@@ -24,6 +24,7 @@ from fastapi.staticfiles import StaticFiles
 
 from . import __version__
 from .hub import CLOSED, LiveHub
+from .insights import BUCKET_S, TENDENCY_HOURS, summarize
 
 DASHBOARD_DIR = Path(__file__).parent / "dashboard"
 
@@ -35,6 +36,7 @@ RANGES: dict[str, tuple[int, int]] = {
     "24h": (86_400, 300),
     "7d": (604_800, 3_600),
     "30d": (2_592_000, 14_400),
+    "1y": (31_536_000, 86_400),  # daily points, from the hourly aggregates
 }
 LIVE_WINDOW_S = 15 * 60
 HISTORY_METRICS = ("temperature_c", "humidity_pct", "pressure_hpa", "dew_point_c")
@@ -63,6 +65,7 @@ class DataSource(Protocol):
     hub: LiveHub
     offline_after_s: float
     ingest_port: int | None  # where devices connect (shown in the "waiting for data" hint)
+    altitude_m: float | None  # of the sensors, for sea-level pressure (None: not shown)
 
     async def devices(self) -> list[dict[str, Any]]:
         """One row per device: ids, first/last seen, counters and its `latest` reading."""
@@ -108,6 +111,7 @@ def create_app(source: DataSource, *, lifespan: Any = None) -> FastAPI:
             "links": source.links(),
             "ingest_port": source.ingest_port,
             "offline_after_s": source.offline_after_s,
+            "altitude_m": source.altitude_m,
             "live_window_s": LIVE_WINDOW_S,
             "ranges": list(RANGES),
         }
@@ -140,6 +144,14 @@ def create_app(source: DataSource, *, lifespan: Any = None) -> FastAPI:
             "bucket_s": bucket,
             **data,
         }
+
+    @app.get("/api/insights")
+    async def insights(device_id: str) -> dict[str, Any]:
+        """Pressure tendency over 3 hours, sea-level pressure and indoor comfort."""
+        end = time.time()
+        start = (end - TENDENCY_HOURS * 3600 - 2 * BUCKET_S) // BUCKET_S * BUCKET_S
+        history = await source.history(device_id, start, end, BUCKET_S)
+        return {"device_id": device_id, **summarize(history, source.altitude_m)}
 
     @app.get("/api/readings/export.csv")
     async def export(device_id: str, range_: str = Query("24h", alias="range")) -> Response:

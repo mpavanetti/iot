@@ -35,6 +35,7 @@ export class Overview {
     this.range = recall("iot-range") || "live";
     this.live = []; // raw readings of the selected device, oldest first
     this.history = null;
+    this.insights = null; // pressure tendency, sea-level pressure, comfort (api/insights)
     this.loadToken = 0;
     this.renderQueued = false;
 
@@ -60,6 +61,7 @@ export class Overview {
       button.addEventListener("click", () => this.setRange(button.dataset.range));
     }
     setInterval(() => this.range !== "live" && !document.hidden && this.load(), HISTORY_REFRESH_MS);
+    setInterval(() => this.range === "live" && !document.hidden && this.loadInsights(), HISTORY_REFRESH_MS);
     this.markRange();
   }
 
@@ -94,6 +96,7 @@ export class Overview {
     remember("iot-device", deviceId);
     this.live = [];
     this.history = null;
+    this.insights = null;
     this.load();
   }
 
@@ -117,19 +120,34 @@ export class Overview {
     const range = this.range;
     this.root.classList.add("loading"); // keep the previous frame visible while fetching
     try {
-      const [recent, history] = await Promise.all([
+      const [recent, history, insights] = await Promise.all([
         getJSON("api/readings/recent", { device_id: deviceId, minutes: LIVE_WINDOW_S / 60 }),
         range === "live" ? null : getJSON("api/readings/history", { device_id: deviceId, range }),
+        getJSON("api/insights", { device_id: deviceId }),
       ]);
       if (token !== this.loadToken) return;
       this.live = recent.readings;
       this.history = history;
+      this.insights = insights;
     } catch (error) {
       console.error(error);
     } finally {
       if (token === this.loadToken) this.root.classList.remove("loading");
     }
     this.render();
+  }
+
+  async loadInsights() {
+    const deviceId = this.deviceId;
+    if (!deviceId) return; // no board yet
+    try {
+      const insights = await getJSON("api/insights", { device_id: deviceId });
+      if (deviceId !== this.deviceId) return;
+      this.insights = insights;
+      this.queueRender();
+    } catch (error) {
+      console.error(error);
+    }
   }
 
   onReading(reading) {
@@ -213,6 +231,7 @@ export class Overview {
         el("span", { class: "kpi-value" }, number(value, meta.digits), el("span", { class: "unit" }, meta.unit)),
         el("span", { class: "kpi-delta" }, delta == null ? "" : `${signed(delta, meta.digits)} ${meta.unit} ${deltaLabel}`),
         sparkline(sample(trend, 90)),
+        ...kpiNotes(metric, this.insights).map((note) => el("span", { class: "kpi-note" }, note)),
       );
     });
     document.getElementById("kpis").replaceChildren(...tiles);
@@ -251,10 +270,13 @@ export class Overview {
     const lossPct = device.messages ? (100 * (device.dropped || 0)) / (device.messages + (device.dropped || 0)) : 0;
 
     const facts = [
-      ["IP address", latest.ip || device.ip || "–"],
+      ["IP address", latest.ip || (latest.source === "usb" ? "none: Wi-Fi off" : device.ip) || "–"],
       ["Connection", sourceName(device.source)],
       ["Firmware", latest.firmware || device.firmware || "–"],
       ["Uptime", duration(latest.uptime_s)],
+      ["Last start", latest.boot_reason || "–"],
+      ["Longest loop pass", latest.loop_max_ms == null ? "–" : `${integer(latest.loop_max_ms)} ms`],
+      ["Sensor errors", latest.sensor_errors == null ? "–" : `${integer(latest.sensor_errors)} since boot`],
       ["Board temperature", latest.cpu_temp_c == null ? "–" : `${number(latest.cpu_temp_c, 1)} °C`],
       ["CPU frequency", latest.cpu_freq_mhz == null ? "–" : `${integer(latest.cpu_freq_mhz)} MHz`],
       ["Free storage", latest.storage_free_kb == null ? "–" : bytes(latest.storage_free_kb * 1024)],
@@ -275,7 +297,8 @@ export class Overview {
         "div",
         { class: "meters" },
         meter("Memory used", memoryPct, total ? `${bytes(used)} of ${bytes(total)}` : "–", memoryPct > 90 ? "critical" : memoryPct > 80 ? "warning" : ""),
-        meter("Wi-Fi signal", wifi.pct, latest.wifi_rssi_dbm == null ? "–" : `${wifi.word} · ${latest.wifi_rssi_dbm} dBm`, wifi.pct != null && wifi.pct < 40 ? "warning" : ""),
+        meter("CPU busy", latest.cpu_busy_pct, latest.cpu_busy_pct == null ? "–" : `${number(latest.cpu_busy_pct, 1)} % of one core`, latest.cpu_busy_pct > 90 ? "critical" : latest.cpu_busy_pct > 70 ? "warning" : ""),
+        meter("Wi-Fi signal", wifi.pct, latest.wifi_rssi_dbm != null ? `${wifi.word} · ${latest.wifi_rssi_dbm} dBm` : latest.source === "usb" ? "off (on USB)" : "–", wifi.pct != null && wifi.pct < 40 ? "warning" : ""),
       ),
       el("dl", { class: "facts" }, facts.flatMap(([label, value]) => [el("dt", {}, label), el("dd", {}, value)])),
     );
@@ -373,6 +396,27 @@ function sample(values, max) {
 function describe(spec, latest, when) {
   const parts = spec.series.map((s) => `${s.label} ${latest ? number(latest[s.key], 1) : "–"} ${spec.unit}`);
   return `${parts.join(", ")} ${when}; last 15 minutes`;
+}
+
+/** Extra lines under a KPI tile, from api/insights. */
+function kpiNotes(metric, insights) {
+  if (!insights) return [];
+  if (metric === "humidity_pct" && insights.comfort) {
+    return [`${insights.comfort.label} indoors (${insights.comfort.range})`];
+  }
+  if (metric !== "pressure_hpa") return [];
+  const notes = [];
+  const tendency = insights.pressure_tendency;
+  if (tendency) {
+    const trend = tendency.trend[0].toUpperCase() + tendency.trend.slice(1);
+    notes.push(`${trend}, ${signed(tendency.change_hpa, 1)} hPa in ${tendency.hours} h: ${tendency.outlook}`);
+  } else {
+    notes.push("Trend shown after 3 hours of data");
+  }
+  if (insights.sea_level_pressure_hpa != null) {
+    notes.push(`${number(insights.sea_level_pressure_hpa, 1)} hPa at sea level (${integer(insights.altitude_m)} m)`);
+  }
+  return notes;
 }
 
 function sourceName(source) {
