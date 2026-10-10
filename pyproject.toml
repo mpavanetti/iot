@@ -22,6 +22,12 @@ lite = [
     "pyserial>=3.5",
     "psutil>=7.2",
 ]
+# A USB webcam for Lite: the Camera tab (live view), motion, zones, sound and recordings.
+camera = [
+    "opencv-python-headless>=5.0",
+    "numpy>=2.3",
+    "av>=19.0",  # H.264 for the motion recordings
+]
 # Platform services: gateway (TCP -> Kafka) and web app (Kafka + PostgreSQL -> dashboard).
 platform = [
     "iotcenter[lite]",
@@ -38,7 +44,7 @@ analytics = [
     "psycopg[binary]>=3.3",
 ]
 dev = [
-    "iotcenter[platform,analytics]",
+    "iotcenter[platform,analytics,camera]",
     "mpremote>=1.29",  # make firmware: upload to the Pico W
     "pytest>=9.1",
     "pytest-asyncio>=1.4",

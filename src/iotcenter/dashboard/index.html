@@ -22,6 +22,7 @@
     </a>
     <nav class="tabs" aria-label="Views">
       <a href="#overview" data-view="overview">Overview</a>
+      <a href="#camera" data-view="camera" id="camera-tab" hidden>Camera</a>
       <a href="#devices" data-view="devices">Devices</a>
       <a href="#pipeline" data-view="pipeline">Pipeline</a>
       <span class="tab-links" id="external-links"></span>
@@ -35,6 +36,12 @@
       </button>
     </div>
   </header>
+
+  <div class="alarm-banner" id="alarm-banner" role="alert" hidden>
+    <svg viewBox="0 0 16 16" aria-hidden="true"><use href="#icon-warn"/></svg>
+    <strong id="alarm-title"></strong><span id="alarm-detail"></span>
+    <a href="#camera" id="alarm-link">Open the camera</a>
+  </div>
 
   <main>
     <!-- Overview: one device, live or historical -->
@@ -125,6 +132,120 @@
       </div>
     </section>
 
+    <!-- Camera: the live picture at full quality, and what the camera notices -->
+    <section class="view" id="view-camera" aria-labelledby="camera-title" hidden>
+      <div class="view-header">
+        <h1 id="camera-title">Camera</h1>
+        <p class="subtitle" id="camera-subtitle">Live, at the camera's own resolution and quality.</p>
+      </div>
+
+      <div class="filters">
+        <div class="segmented" id="camera-rate" role="radiogroup" aria-label="Frame rate">
+          <button type="button" role="radio" data-rate="full" title="Every frame the camera sends">Full</button>
+          <button type="button" role="radio" data-rate="15">15 fps</button>
+          <button type="button" role="radio" data-rate="5" title="Less data, for slow connections">5 fps</button>
+          <button type="button" role="radio" data-rate="1">1 fps</button>
+        </div>
+        <button class="button" id="camera-boxes" type="button" aria-pressed="true" title="Draw a box around anything that moves (only while something moves)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-boxes"/></svg>Motion boxes
+        </button>
+        <button class="button" id="camera-show-zones" type="button" aria-pressed="true" title="Show the zones' outlines and names on the picture">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-zones"/></svg>Zone outlines
+        </button>
+        <button class="button" id="camera-listen" type="button" aria-pressed="false" title="Hear the camera's microphone (a few seconds behind)" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-sound"/></svg><span>Listen</span>
+        </button>
+        <span class="spacer"></span>
+        <button class="button" id="camera-snapshot" type="button" title="Save the current picture to this device">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-download"/></svg>Snapshot
+        </button>
+        <button class="button" id="camera-fullscreen" type="button" title="Full screen (or double-click the picture)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-expand"/></svg><span>Full screen</span>
+        </button>
+      </div>
+
+      <figure class="card camera-card">
+        <div class="camera-stage" id="camera-stage">
+          <div class="camera-frame" id="camera-frame">
+            <img id="camera-image" alt="Live picture from the camera">
+            <svg class="camera-zones" id="camera-zones-layer" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true"></svg>
+            <div class="camera-zone-labels" id="camera-zone-labels" aria-hidden="true"></div>
+            <svg class="camera-boxes" id="camera-boxes-layer" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true"></svg>
+            <div class="camera-hint" id="camera-hint" hidden>Drag over the picture to mark the zone · Esc to cancel</div>
+            <div class="camera-hint" id="camera-toast" role="status" hidden></div>
+            <div class="camera-overlay">
+              <span class="camera-pill" id="camera-live"><span class="dot" aria-hidden="true"></span><span class="label">Live</span></span>
+              <span class="camera-pill" id="camera-moving" hidden>Motion</span>
+              <span class="camera-pill rec" id="camera-rec" hidden>Recording</span>
+              <span class="camera-pill camera-clock" id="camera-clock" aria-hidden="true"></span>
+            </div>
+            <div class="camera-message" id="camera-message" role="status" hidden></div>
+          </div>
+        </div>
+      </figure>
+
+      <div class="camera-panels">
+        <section class="card camera-panel" id="camera-motion" aria-labelledby="camera-motion-title"></section>
+        <section class="card camera-panel" id="camera-light" aria-labelledby="camera-light-title"></section>
+        <section class="card camera-panel" id="camera-sound" aria-labelledby="camera-sound-title" hidden></section>
+        <section class="card camera-panel" id="camera-stream" aria-labelledby="camera-stream-title"></section>
+      </div>
+
+      <section class="card camera-zones-card" id="camera-zones" aria-labelledby="camera-zones-title">
+        <header class="card-header zones-header">
+          <div>
+            <h2 id="camera-zones-title">Zones</h2>
+            <p class="subtitle">Parts of the picture to watch: a floor for water, a status light or flame, an area for motion.</p>
+          </div>
+          <button class="button" id="zone-add" type="button">Add zone</button>
+        </header>
+        <form class="zone-form" id="zone-form" hidden>
+          <label class="field"><span>Name</span><input name="name" maxlength="40" required placeholder="e.g. Floor by the water heater" autocomplete="off"></label>
+          <label class="field"><span>Watch for</span>
+            <select name="kind">
+              <option value="floor">Water on the floor</option>
+              <option value="drain">A floor drain (only water pooling around it)</option>
+              <option value="light">A status light or flame</option>
+              <option value="area">Motion only</option>
+            </select>
+          </label>
+          <button class="button primary" type="submit">Save zone</button>
+          <button class="button" type="button" id="zone-cancel">Cancel</button>
+          <span class="subtitle" id="zone-form-note"></span>
+        </form>
+        <div class="table-scroll" id="zone-list"></div>
+      </section>
+
+      <section class="card recordings-card" id="camera-recordings" aria-labelledby="camera-recordings-title" hidden>
+        <header class="card-header zones-header">
+          <div>
+            <h2 id="camera-recordings-title">Recordings</h2>
+            <p class="subtitle" id="recordings-subtitle">A short clip of each motion, kept on this machine.</p>
+          </div>
+          <label class="field recordings-day"><span>Day</span><input type="date" id="recordings-day"></label>
+        </header>
+        <div class="clips" id="clips"></div>
+      </section>
+
+      <dialog class="clip-player card" id="clip-player" aria-labelledby="clip-title">
+        <header class="clip-player-head">
+          <div><strong id="clip-title"></strong><p class="subtitle" id="clip-detail"></p></div>
+          <a class="button small" id="clip-download" download>Download</a>
+          <button class="button small" id="clip-delete" type="button">Delete</button>
+          <button class="button small" id="clip-close" type="button" aria-label="Close">Close</button>
+        </header>
+        <video id="clip-video" controls playsinline preload="auto"></video>
+      </dialog>
+
+      <section class="card readings-card" aria-labelledby="camera-events-title">
+        <header class="card-header">
+          <h2 id="camera-events-title">Recent activity</h2>
+          <p class="subtitle">Since IoT Center started, newest first. Kept in memory only.</p>
+        </header>
+        <div class="table-scroll" id="camera-events"></div>
+      </section>
+    </section>
+
     <!-- Devices: every board ever seen -->
     <section class="view" id="view-devices" aria-labelledby="devices-title" hidden>
       <div class="view-header">
@@ -169,6 +290,21 @@
     </symbol>
     <symbol id="icon-download" viewBox="0 0 24 24">
       <path d="M12 4v11m0 0l-4.5-4.5M12 15l4.5-4.5M5 19h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="icon-expand" viewBox="0 0 24 24">
+      <path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="icon-boxes" viewBox="0 0 24 24">
+      <rect x="4" y="6" width="9" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
+      <rect x="14" y="11" width="6" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
+    </symbol>
+    <symbol id="icon-zones" viewBox="0 0 24 24">
+      <path d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="8" y="8" width="8" height="8" rx="1" fill="currentColor" opacity="0.35"/>
+    </symbol>
+    <symbol id="icon-sound" viewBox="0 0 24 24">
+      <path d="M4 9.5v5h4l5 4v-13l-5 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M16.5 9a4.5 4.5 0 0 1 0 6M19 6.5a8 8 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
     </symbol>
     <symbol id="icon-external" viewBox="0 0 24 24">
       <path d="M14 5h5v5M19 5l-8 8M17 14v5H5V7h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>

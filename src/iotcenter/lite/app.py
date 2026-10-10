@@ -3,9 +3,13 @@
     Pico W ──TCP :1500──┐
                         ├─▶ parse_line() ─▶ SQLite ──────────▶ REST API ─┐
     Pico W ──USB serial─┘                 └─▶ LiveHub ─▶ SSE stream ─────┴─▶ dashboard
+    webcam ──V4L2──▶ Camera ──────────────────────────▶ MJPEG stream ────────┘
+                       └──▶ ActivityMonitor (motion, light, zones) ─▶ LiveHub
+    microphone ──arecord──▶ Microphone ─▶ SoundAnalyzer (level, alarms) ─▶ LiveHub
 
 Everything runs on one asyncio event loop: the TCP server, the optional serial reader, a
-retention task and the web server (uvicorn).
+retention task and the web server (uvicorn). The optional camera and microphone capture on
+threads of their own.
 """
 
 from __future__ import annotations
@@ -130,6 +134,42 @@ class LiteSource:
         return []
 
 
+def _camera(settings: Settings, hub: LiveHub) -> tuple[Any, Any]:
+    """The webcam (or demo scene) and its activity monitor, which reports live on the hub."""
+    from ..camera import Camera, open_source
+    from ..vision import ActivityMonitor
+
+    device = settings.camera_device
+    frames = open_source(device, settings.camera_width, settings.camera_height, settings.camera_fps)
+    camera = Camera(frames, name=settings.camera_name, device=device)
+    zones = settings.db_path.with_name("camera-zones.json")  # names and rectangles, no pictures
+
+    def publish(sample: dict[str, Any]) -> None:
+        hub.broadcast("camera", sample)
+
+    return camera, ActivityMonitor(camera, publish=publish, zones=zones)
+
+
+def _recorder(settings: Settings, camera: Any, activity: Any) -> Any:
+    """Motion clips, next to the database (data/recordings, or /data/recordings in Docker)."""
+    from ..recorder import Recorder
+
+    folder = settings.db_path.parent / "recordings"
+    days, max_gb = settings.camera_record_days, settings.camera_record_max_gb
+    return Recorder(camera, activity, folder, days=days, max_gb=max_gb)
+
+
+def _microphone(settings: Settings, hub: LiveHub) -> Any:
+    """The microphone (or demo sounds); what it hears goes out live on the hub."""
+    from ..microphone import Microphone, open_source
+
+    def publish(sample: dict[str, Any]) -> None:
+        hub.broadcast("sound", sample)
+
+    device = settings.microphone_device
+    return Microphone(open_source(device), device=device, publish=publish)
+
+
 def _status(enabled: bool, healthy: bool) -> str:
     if not enabled:
         return "disabled"
@@ -151,6 +191,9 @@ def create_lite_app(settings: Settings | None = None) -> FastAPI:
 
     processor = LineProcessor(on_reading, None, stats)
     source = LiteSource(settings, storage, hub, stats)
+    camera, activity = _camera(settings, hub) if settings.camera_device else (None, None)
+    recorder = _recorder(settings, camera, activity) if camera and settings.camera_record else None
+    microphone = _microphone(settings, hub) if settings.microphone_device else None
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -162,6 +205,13 @@ def create_lite_app(settings: Settings | None = None) -> FastAPI:
         for reader in readers:
             await reader.start()
         app.state.readers = readers
+        if camera is not None:
+            await camera.start()
+            await activity.start()
+        if recorder is not None:
+            await recorder.start()
+        if microphone is not None:
+            await microphone.start()
         retention = asyncio.create_task(
             _retention_loop(storage, settings.retention_days, settings.hourly_retention_days)
         )
@@ -179,8 +229,22 @@ def create_lite_app(settings: Settings | None = None) -> FastAPI:
             retention.cancel()
             for reader in readers:
                 await reader.stop()
+            if recorder is not None:
+                await recorder.stop()  # finishes the clip being recorded
+            if camera is not None:
+                await activity.stop()
+                await camera.stop()
+            if microphone is not None:
+                await microphone.stop()
 
-    app = create_app(source, lifespan=lifespan)
+    app = create_app(
+        source,
+        lifespan=lifespan,
+        camera=camera,
+        activity=activity,
+        microphone=microphone,
+        recorder=recorder,
+    )
     app.state.source = source
     return app
 

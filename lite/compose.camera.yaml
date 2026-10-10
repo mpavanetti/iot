@@ -1,0 +1,31 @@
+# Overlay: a USB webcam for the dashboard's Camera tab (live view, motion and light).
+#   docker compose -f compose.yaml -f compose.camera.yaml up -d --build
+#
+# Like the USB overlay, the host's /dev is mounted read-only at /hostdev, so the camera can be
+# unplugged and plugged back in at any time and the container starts without it. Only video
+# devices (major number 81) may be opened. CAMERA_DEVICE is the path under /dev: video0 by
+# default, or the stable name from `ls /dev/v4l/by-id`, e.g. v4l/by-id/usb-<camera>-video-index0.
+#
+# MICROPHONE_DEVICE turns on the camera's microphone (sound level, alarms, Listen): an ALSA
+# device such as plughw:CARD=C960,DEV=0 (the card's name from `arecord -l`); empty = off.
+# Sound devices (major 116) come from the host's /dev/snd, where ALSA expects them.
+# Frames and sound stay in memory: nothing from the camera is written to disk.
+
+services:
+  lite:
+    build:
+      args:
+        EXTRAS: lite,camera
+    volumes:
+      - /dev:/hostdev:ro
+      - /dev/snd:/dev/snd:ro
+    device_cgroup_rules:
+      - "c 81:* rmw"
+      - "c 116:* rmw"
+    environment:
+      IOT_CAMERA_DEVICE: /hostdev/${CAMERA_DEVICE:-video0}
+      IOT_CAMERA_NAME: ${CAMERA_NAME:-Camera}
+      IOT_MICROPHONE_DEVICE: ${MICROPHONE_DEVICE:-}
+      IOT_CAMERA_RECORD: ${CAMERA_RECORD:-false}  # a clip of each motion, kept in the lite-data volume
+      IOT_CAMERA_RECORD_DAYS: ${CAMERA_RECORD_DAYS:-30}
+      IOT_CAMERA_RECORD_MAX_GB: ${CAMERA_RECORD_MAX_GB:-20}

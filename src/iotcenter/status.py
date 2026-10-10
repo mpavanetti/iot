@@ -92,6 +92,31 @@ def report(base: str, color: bool) -> str:
         detail = " · ".join(str(f) for f in facts if f not in (None, ""))
         lines.append(f"  {paint(mark, code)} {component['name']:<{width}}  {detail}")
 
+    if info.get("camera"):
+        camera = get(base, "/api/camera")
+        lines += ["", paint("Camera", "1")]
+        mark, code = MARKS["up" if camera["state"] == "streaming" else "down"]
+        if camera["state"] == "streaming":
+            fps = f"{camera['fps']:.1f} fps" if camera.get("fps") else "no frames this second"
+            facts = f"{camera['width']}×{camera['height']} {camera['format']} · {fps}"
+            facts += f" · {camera['viewers']} watching"
+        else:
+            facts = f"{camera['state']}: {camera.get('error') or 'starting'}"
+        lines.append(f"  {paint(mark, code)} {camera['name']}  {facts}")
+        for zone in (camera.get("activity") or {}).get("zones", []):
+            lines.append(f"      zone {zone['name']} ({zone['kind']}): {zone['state']}")
+    if info.get("microphone"):
+        sound = get(base, "/api/sound")
+        lines += ["", paint("Sound", "1")]
+        mark, code = MARKS["up" if sound["state"] == "listening" else "down"]
+        if sound["state"] == "listening":
+            facts = f"{sound['level_db']:.0f} dBFS (background {sound['background_db']:.0f})"
+            if sound.get("alarm"):
+                facts += f" · ALARM: {sound['alarm']['pattern']} pattern"
+        else:
+            facts = f"{sound['state']}: {sound.get('error') or 'starting'}"
+        lines.append(f"  {paint(mark, code)} {sound['device']}  {facts}")
+
     forecast = (status.get("storage") or {}).get("forecast")
     if forecast:
         lines += ["", paint("Storage", "1")]

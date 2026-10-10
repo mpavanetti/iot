@@ -2,8 +2,9 @@
 // Works unchanged on both editions; /api/info says which one is serving it.
 
 import { getJSON, openLiveStream } from "./api.js";
+import { ALARMS, CameraView } from "./camera.js";
 import { renderDevices, tickDevices } from "./devices.js";
-import { el, icon } from "./format.js";
+import { clock, el, icon } from "./format.js";
 import { Overview } from "./overview.js";
 import { Pipeline, hostUrl } from "./pipeline.js";
 
@@ -11,6 +12,8 @@ const VIEWS = ["overview", "devices", "pipeline"];
 const app = { info: null, devices: [] };
 let overview;
 let pipeline;
+let camera = null; // only when the server has one (api/info)
+const alerts = { alarm: null, water: [] }; // an alarm heard now, floor zones that may be wet
 let view = "overview";
 let devicesRefresh = null;
 
@@ -21,16 +24,27 @@ async function boot() {
 
   overview = new Overview(app);
   pipeline = new Pipeline();
+  if (app.info.camera) {
+    camera = new CameraView(app.info.camera, { microphone: app.info.microphone });
+    VIEWS.splice(1, 0, "camera");
+  }
+  if (app.info.microphone) checkAlarm();
   await refreshDevices();
   route();
   window.addEventListener("hashchange", route);
+  // The picture streams only while someone can see it.
+  document.addEventListener("visibilitychange", () => view === "camera" && (document.hidden ? camera.stop() : camera.start()));
 
   openLiveStream({
     onReading,
+    onCamera,
+    onSound,
     onState: setConnection,
     onReconnect: () => {
       refreshDevices();
       overview.load();
+      camera?.onReconnect();
+      if (app.info.microphone) checkAlarm();
     },
   });
   setInterval(refreshDevices, 15_000);
@@ -55,6 +69,7 @@ function renderChrome(info) {
   edition.hidden = false;
   document.title = `IoT Center ${edition.textContent}`;
   document.getElementById("version").textContent = `IoT Center ${info.version} · ${edition.textContent}`;
+  document.getElementById("camera-tab").hidden = !info.camera;
   const port = info.ingest_port ?? 1500;
   document.getElementById("ingest-address").textContent = `tcp://${location.hostname}:${port}`;
   document.getElementById("external-links").replaceChildren(
@@ -119,6 +134,46 @@ function tick() {
   }
   if (view === "overview") overview.tick();
   if (view === "devices") tickDevices();
+  if (view === "camera") camera.tick();
+}
+
+// --- alerts: a banner on every view while a floor may be wet or an alarm sounds -----------------
+
+function onCamera(sample) {
+  camera?.onActivity(sample);
+  const water = (sample.zones || []).filter((zone) => zone.state === "water").map((zone) => zone.name);
+  if (water.join("\n") !== alerts.water.join("\n")) {
+    alerts.water = water;
+    showAlerts();
+  }
+}
+
+function onSound(sample) {
+  camera?.onSound(sample);
+  if (sample.alarm !== (alerts.alarm?.pattern ?? null)) {
+    alerts.alarm = sample.alarm ? { pattern: sample.alarm, start: Date.now() / 1000 } : null;
+    showAlerts();
+  }
+}
+
+async function checkAlarm() {
+  try {
+    alerts.alarm = (await getJSON("api/sound")).alarm;
+    showAlerts();
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+function showAlerts() {
+  const { alarm, water } = alerts;
+  const titles = [];
+  if (water.length) titles.push(`Possible water: ${water.join(", ")}`);
+  if (alarm) titles.push(ALARMS[alarm.pattern] || "Alarm sounding");
+  document.getElementById("alarm-banner").hidden = !titles.length;
+  document.getElementById("alarm-title").textContent = titles.join(" · ");
+  document.getElementById("alarm-detail").textContent = alarm ? ` · heard since ${clock(alarm.start)}` : " · check the camera";
+  document.getElementById("alarm-link").hidden = !camera || view === "camera";
 }
 
 function openDevice(deviceId) {
@@ -138,6 +193,9 @@ function route() {
   }
   if (view === "pipeline") pipeline.start();
   else pipeline.stop();
+  if (view === "camera" && !document.hidden) camera.start();
+  else camera?.stop();
+  document.getElementById("alarm-link").hidden = !camera || view === "camera";
   if (view === "devices") renderDevices(app.devices, openDevice);
   if (view === "overview") overview.render();
 }

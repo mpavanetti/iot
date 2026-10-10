@@ -14,7 +14,8 @@ LITE := cd lite && docker compose
 SIMULATOR := $(PYTHON) simulator/simulate_picow.py
 
 .DEFAULT_GOAL := help
-.PHONY: help install lite lite-docker lite-docker-usb lite-down lite-status firmware simulate backfill \
+.PHONY: help install lite lite-docker lite-docker-usb lite-docker-camera lite-down lite-status \
+        lite-camera-demo firmware simulate backfill \
         platform-up platform-status platform-down platform-purge \
         platform-logs platform-reset tools rebuild-hourly test test-spark e2e lint format
 
@@ -38,6 +39,13 @@ lite-docker: ## Run IoT Center Lite in Docker
 lite-docker-usb: ## Run IoT Center Lite in Docker, also reading a Pico W on USB
 	$(LITE) -f compose.yaml -f compose.usb.yaml up -d --build
 	@$(call status,$(LITE),lite,--wait 120)
+
+lite-docker-camera: ## Run IoT Center Lite in Docker with a Pico W on USB and a USB webcam (lite/.env)
+	$(LITE) -f compose.yaml -f compose.usb.yaml -f compose.camera.yaml up -d --build
+	@$(call status,$(LITE),lite,--wait 120)
+
+lite-camera-demo: ## Run IoT Center Lite locally with the demo camera and sounds (no webcam needed)
+	$(BIN)/iotcenter lite --camera demo --microphone demo
 
 lite-down: ## Stop Lite in Docker (data is kept)
 	$(LITE) down

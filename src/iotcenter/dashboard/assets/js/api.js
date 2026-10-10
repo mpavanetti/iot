@@ -11,6 +11,24 @@ export async function getJSON(path, params = {}) {
   return response.json();
 }
 
+/** POST/DELETE with an optional JSON body; the server's `detail` becomes the error. */
+export async function send(method, path, body) {
+  const response = await fetch(new URL(path, document.baseURI), {
+    method,
+    headers: body ? { "Content-Type": "application/json" } : {},
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!response.ok) {
+    let detail = `${response.status} ${response.statusText}`;
+    try {
+      const data = await response.json();
+      detail = typeof data.detail === "string" ? data.detail : data.detail?.[0]?.msg || detail;
+    } catch {}
+    throw new Error(detail);
+  }
+  return response.status === 204 ? null : response.json();
+}
+
 export function exportUrl(deviceId, range) {
   const url = new URL("api/readings/export.csv", document.baseURI);
   url.searchParams.set("device_id", deviceId);
@@ -21,9 +39,10 @@ export function exportUrl(deviceId, range) {
 /**
  * Live readings over Server-Sent Events. The browser reconnects by itself after network
  * hiccups; if the server rejects the stream outright we retry every 5 s.
- * onState receives "connecting" | "live" | "offline".
+ * onState receives "connecting" | "live" | "offline"; onCamera and onSound, what the camera
+ * and the microphone notice.
  */
-export function openLiveStream({ onReading, onState, onReconnect }) {
+export function openLiveStream({ onReading, onCamera, onSound, onState, onReconnect }) {
   let source;
   let wasLive = false;
 
@@ -36,6 +55,8 @@ export function openLiveStream({ onReading, onState, onReconnect }) {
       wasLive = true;
     });
     source.addEventListener("reading", (event) => onReading(JSON.parse(event.data)));
+    source.addEventListener("camera", (event) => onCamera?.(JSON.parse(event.data)));
+    source.addEventListener("sound", (event) => onSound?.(JSON.parse(event.data)));
     source.onerror = () => {
       if (source.readyState === EventSource.CLOSED) {
         onState("offline");

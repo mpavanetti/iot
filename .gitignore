@@ -17,6 +17,15 @@ data/
 *.db-shm
 *.db-wal
 
+# Camera pictures and recordings (they show the inside of a home): never commit them
+snapshots/
+recordings/
+*.mjpg
+*.mjpeg
+
+# Browser-automation output (page snapshots, screenshots of the live camera)
+.playwright-mcp/
+
 # Editors and OS
 .vscode/
 .idea/

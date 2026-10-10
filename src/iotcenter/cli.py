@@ -14,8 +14,14 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import sys
 from pathlib import Path
+
+# numpy's OpenBLAS starts a thread per core that spins between operations. IoT Center's arrays
+# (sound, small camera thumbnails) are tiny, so one thread does the work for a twentieth of the
+# CPU. It must be set before numpy is first imported.
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
 
 from . import __version__
 from .config import Settings
@@ -38,6 +44,17 @@ def main(argv: list[str] | None = None) -> None:
         "--serial", metavar="PORT", help="also read a USB serial port, e.g. /dev/ttyACM0"
     )
     lite.add_argument("--baud", type=int, help="serial baud rate (default 115200)")
+    lite.add_argument(
+        "--camera", metavar="DEVICE", help="stream a webcam, e.g. /dev/video0 ('demo': test scene)"
+    )
+    lite.add_argument(
+        "--record", action="store_true", help="record a short clip of each motion (with --camera)"
+    )
+    lite.add_argument(
+        "--microphone",
+        metavar="DEVICE",
+        help="listen to an ALSA device, e.g. plughw:CARD=C960,DEV=0 ('demo': test sounds)",
+    )
     lite.add_argument("--db", type=Path, help="SQLite file (default data/iot-lite.db)")
     lite.add_argument("--retention-days", type=int, help="days of raw readings to keep (0 = all)")
     lite.add_argument(
@@ -71,12 +88,16 @@ def main(argv: list[str] | None = None) -> None:
             tcp_port="tcp_port",
             serial="serial_port",
             baud="serial_baud",
+            camera="camera_device",
+            microphone="microphone_device",
             db="db_path",
             retention_days="retention_days",
             hourly_retention_days="hourly_retention_days",
         )
         if args.no_tcp:
             settings.tcp_enabled = False
+        if args.record:
+            settings.camera_record = True
         from .lite.app import create_lite_app
 
         _serve(create_lite_app(settings), settings)

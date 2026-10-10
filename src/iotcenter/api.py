@@ -5,7 +5,9 @@ The browser only talks to these endpoints. Each edition plugs in a `DataSource`:
   * Lite      SQLite for history, its own LiveHub for live readings
   * Platform  PostgreSQL (written by Spark) for history, a Kafka consumer for live readings
 
-so the very same dashboard runs unchanged on top of either pipeline.
+so the very same dashboard runs unchanged on top of either pipeline. A camera, when there is
+one (`camera.py`), adds its own routes under /api/camera, and a microphone (`microphone.py`)
+under /api/sound.
 """
 
 from __future__ import annotations
@@ -15,7 +17,7 @@ import io
 import time
 from collections.abc import AsyncIterable
 from pathlib import Path
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import Response
@@ -23,8 +25,14 @@ from fastapi.sse import EventSourceResponse, ServerSentEvent
 from fastapi.staticfiles import StaticFiles
 
 from . import __version__
-from .hub import CLOSED, LiveHub
+from .hub import CLOSED, Event, LiveHub
 from .insights import BUCKET_S, TENDENCY_HOURS, summarize
+
+if TYPE_CHECKING:  # the camera needs OpenCV, an optional extra
+    from .camera import Camera
+    from .microphone import Microphone
+    from .recorder import Recorder
+    from .vision import ActivityMonitor
 
 DASHBOARD_DIR = Path(__file__).parent / "dashboard"
 
@@ -90,7 +98,15 @@ class DataSource(Protocol):
         """Other UIs to link from the header (the browser resolves the host)."""
 
 
-def create_app(source: DataSource, *, lifespan: Any = None) -> FastAPI:
+def create_app(
+    source: DataSource,
+    *,
+    lifespan: Any = None,
+    camera: Camera | None = None,
+    activity: ActivityMonitor | None = None,
+    microphone: Microphone | None = None,
+    recorder: Recorder | None = None,
+) -> FastAPI:
     app = FastAPI(
         title=f"IoT Center {source.edition.title()}",
         version=__version__,
@@ -114,6 +130,8 @@ def create_app(source: DataSource, *, lifespan: Any = None) -> FastAPI:
             "altitude_m": source.altitude_m,
             "live_window_s": LIVE_WINDOW_S,
             "ranges": list(RANGES),
+            "camera": {"name": camera.name, "recording": recorder is not None} if camera else None,
+            "microphone": microphone is not None,
         }
 
     @app.get("/api/devices")
@@ -174,11 +192,24 @@ def create_app(source: DataSource, *, lifespan: Any = None) -> FastAPI:
 
     @app.get("/api/stream", response_class=EventSourceResponse)
     async def stream() -> AsyncIterable[ServerSentEvent]:
-        """Live readings as Server-Sent Events (the browser's EventSource reconnects itself)."""
+        """Live readings as Server-Sent Events (the browser's EventSource reconnects itself),
+        plus `camera` and `sound` events with what a camera and a microphone notice."""
         async with source.hub.subscribe() as queue:
             yield ServerSentEvent(event="hello", data={"edition": source.edition}, retry=3000)
             while (item := await queue.get()) is not CLOSED:
-                yield ServerSentEvent(event="reading", data=item)
+                if isinstance(item, Event):
+                    yield ServerSentEvent(event=item.name, data=item.data)
+                else:
+                    yield ServerSentEvent(event="reading", data=item)
+
+    if camera is not None:
+        from .camera import camera_routes
+
+        app.include_router(camera_routes(camera, activity, recorder))
+    if microphone is not None:
+        from .microphone import microphone_routes
+
+        app.include_router(microphone_routes(microphone))
 
     app.mount("/", DashboardFiles(directory=DASHBOARD_DIR, html=True), name="dashboard")
     return app

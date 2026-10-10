@@ -36,6 +36,18 @@ class Settings(BaseSettings):
     altitude_m: float | None = None  # of the sensors: shows sea-level pressure (e.g. 1045)
     timezone: str = "UTC"  # how Streamlit shows times, e.g. America/New_York (browsers use local)
 
+    # --- Camera (Lite) ---------------------------------------------------------------------
+    camera_device: str | None = None  # a webcam, e.g. /dev/video0; "demo" for a test scene
+    camera_name: str = "Camera"  # its name on the dashboard, e.g. "Basement"
+    camera_width: int = 1920  # asked for; the camera picks its closest size
+    camera_height: int = 1080
+    camera_fps: int = 30  # at most: many webcams slow down in dim light
+    camera_record: bool = False  # a short clip of each motion event, on this machine's disk
+    camera_record_days: int = 30  # clips older than this are deleted. 0 = only the size limit
+    camera_record_max_gb: float = 20.0  # and the oldest go sooner when they take more than this
+    # an ALSA capture device, e.g. plughw:CARD=C960,DEV=0 (`arecord -L`); "demo": a test room
+    microphone_device: str | None = None
+
     # --- Platform -------------------------------------------------------------------------
     kafka_bootstrap: str = "localhost:9094"
     kafka_topic: str = "iot.readings"
@@ -50,7 +62,9 @@ class Settings(BaseSettings):
     spark_public_port: int = 8080
     spark_app_public_port: int = 4040
 
-    @field_validator("serial_port", "altitude_m", mode="before")
+    @field_validator(
+        "serial_port", "altitude_m", "camera_device", "microphone_device", mode="before"
+    )
     @classmethod
     def _blank_is_none(cls, value: str | None) -> str | None:
         return value or None

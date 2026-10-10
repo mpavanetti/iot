@@ -32,5 +32,9 @@ jobs:
       - uses: actions/checkout@v5
       - run: docker compose -f platform/compose.yaml config --quiet
       - run: docker compose -f lite/compose.yaml -f lite/compose.usb.yaml config --quiet
+      - run: docker compose -f lite/compose.yaml -f lite/compose.usb.yaml -f lite/compose.camera.yaml config --quiet
       - run: docker build --build-arg EXTRAS=lite -t iotcenter-lite .
       - run: docker run --rm iotcenter-lite iotcenter --version
+      - run: docker build --build-arg EXTRAS=lite,camera -t iotcenter-lite-camera .
+      - run: docker run --rm iotcenter-lite-camera python -c "import iotcenter.vision, iotcenter.microphone"
+      - run: docker run --rm iotcenter-lite-camera arecord --version

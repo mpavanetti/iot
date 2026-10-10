@@ -1,6 +1,6 @@
 import asyncio
 
-from iotcenter.hub import CLOSED, LiveHub
+from iotcenter.hub import CLOSED, Event, LiveHub
 
 
 def reading(device: str, t: float) -> dict:
@@ -41,3 +41,13 @@ async def test_close_ends_open_streams():
     async with hub.subscribe() as queue:
         hub.close()
         assert await asyncio.wait_for(queue.get(), 1) is CLOSED
+
+
+async def test_other_live_updates_share_the_stream_but_are_not_remembered():
+    hub = LiveHub()
+    async with hub.subscribe() as queue:
+        hub.broadcast("camera", {"motion_pct": 1.5})
+        hub.publish(reading("a", 1))
+        assert await queue.get() == Event("camera", {"motion_pct": 1.5})
+        assert (await queue.get())["device_id"] == "a"
+    assert set(hub.latest()) == {"a"}
