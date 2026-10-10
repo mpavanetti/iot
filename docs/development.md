@@ -8,7 +8,8 @@ make install          # python3 -m venv .venv && pip install -e ".[dev]"
 ```
 
 Python 3.11 or newer (the Docker images use 3.14). The extras in `pyproject.toml` keep each install small:
-`lite`, `platform` (gateway and web app), `analytics` (Streamlit), and `dev` (everything plus pytest and ruff).
+`lite`, `camera` (OpenCV, for a webcam on Lite), `platform` (gateway and web app), `analytics` (Streamlit), and
+`dev` (everything plus pytest and ruff).
 
 ## Where to start reading
 
@@ -22,12 +23,16 @@ Follow a reading through the code:
    then [`web/app.py`](../src/iotcenter/web/app.py) with [`kafka_live.py`](../src/iotcenter/web/kafka_live.py) and [`postgres.py`](../src/iotcenter/web/postgres.py).
 6. The API both editions serve: [`api.py`](../src/iotcenter/api.py) (the `DataSource` protocol is the seam).
 7. The browser: [`dashboard/assets/js/main.js`](../src/iotcenter/dashboard/assets/js/main.js), then `overview.js` and `charts.js`.
+8. The camera (a separate flow): [`camera.py`](../src/iotcenter/camera.py) (capture, MJPEG, API), then
+   [`vision.py`](../src/iotcenter/vision.py) (motion and light), [`zones.py`](../src/iotcenter/zones.py),
+   [`microphone.py`](../src/iotcenter/microphone.py), [`sound.py`](../src/iotcenter/sound.py) and
+   [`recorder.py`](../src/iotcenter/recorder.py), and in the browser `camera.js`, `zones.js` and `recordings.js`.
 
 ## Tests
 
 | Command | What | Needs |
 |---|---|---|
-| `make test` | unit and integration tests: the contract, ingestion over real sockets and a pseudo-terminal, SQLite, the Lite server end to end (REST and SSE), the simulator, the firmware on CPython, the gateway and web app with fakes | nothing |
+| `make test` | unit and integration tests: the contract, ingestion over real sockets and a pseudo-terminal, SQLite, the Lite server end to end (REST and SSE), the simulator, the firmware on CPython, the gateway and web app with fakes, the camera and microphone with fakes and the demo scene, motion, zones and light on synthetic frames, alarm patterns on synthetic sound, motion clips and their retention | nothing |
 | `make test-spark` | the Spark transformations in local mode, inside the Spark image | Docker |
 | `make e2e` | the running platform: TCP into the gateway, through Kafka and Spark into PostgreSQL, out through the dashboard API, the live stream, the dead-letter topic and every Streamlit page | `make platform-up` |
 | `make lint` | ruff (lint and formatting) | nothing |
@@ -37,8 +42,9 @@ Highlights:
 - [`tests/test_contract.py`](../tests/test_contract.py) fails if the pydantic model, the Spark schema, the SQL tables
   or the firmware's field names drift apart.
 - [`tests/test_firmware.py`](../tests/test_firmware.py) runs the real `main.py`, `link.py` and `hardware.py` on CPython,
-  with small fakes of `machine`, `network` and the drivers, against a real TCP server. It covers store-and-forward
-  across an outage and USB-only mode.
+  with small fakes of `machine`, `network` and the drivers, against a real TCP server, with a pipe standing in
+  for the board's USB input. It covers store-and-forward across an outage, USB-only mode, USB taking over from
+  Wi-Fi (radio off, clock set by the host) and the fall back to Wi-Fi when the host goes quiet.
 - [`tests/test_ingest.py`](../tests/test_ingest.py) uses `os.openpty()` as a stand-in for a Pico W on USB.
 - The end-to-end tests read URLs from `IOT_E2E_WEB`, `IOT_E2E_GATEWAY` and `IOT_E2E_DATABASE_URL` when the stack
   runs on other ports.

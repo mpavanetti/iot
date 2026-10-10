@@ -9,11 +9,14 @@ the delivery guarantees, and what happens when each piece fails.
 Both editions are built from the same parts:
 
 - **The firmware** ([`firmware/`](../firmware)) reads the BME280 every `INTERVAL_S` seconds (2 by default) and
-  writes one JSON line per reading to a persistent TCP connection and/or the USB serial port.
+  writes one JSON line per reading: to the USB serial port while a host reads it (Wi-Fi off), otherwise to a
+  persistent TCP connection over Wi-Fi.
 - **The contract** ([`protocol.py`](../src/iotcenter/protocol.py), [docs/protocol.md](protocol.md)) is a pydantic
   model. `parse_line()` turns bytes into a validated `Reading` or raises `InvalidMessage` with a readable reason.
 - **Ingestion** ([`ingest.py`](../src/iotcenter/ingest.py)): an asyncio TCP server and a USB serial reader that
   both hand each validated reading to a callback. Lite's callback writes SQLite; the gateway's produces to Kafka.
+  The serial reader also writes a [host line](protocol.md#usb-host-lines) to the board every 5 s: that is how the
+  board knows USB is being read (and what time it is).
 - **The dashboard** ([`dashboard/`](../src/iotcenter/dashboard)) and its API ([`api.py`](../src/iotcenter/api.py)).
   Each edition plugs in a `DataSource` with the same six methods (devices, recent, history, readings, status, links),
   so the browser cannot tell which pipeline it is talking to.
@@ -40,9 +43,22 @@ One insert transaction does three things: it stores the raw reading (the primary
 registry counts **sequence gaps** (messages that never arrived) and **restarts** (the counter went back).
 A reading that was actually stored is then published to the LiveHub, which pushes it to every open dashboard.
 
-Raw readings are deleted after `retention_days` (30 by default). The hourly rows are kept forever, so a year of
-history costs a few megabytes. The history API asks the raw table for buckets shorter than an hour and the
-hourly table for the rest, so a 30-day chart is a scan of 720 rows, not 1.3 million.
+**A camera** (optional, [docs/camera.md](camera.md)) is a second, separate flow in the same process. A thread
+captures the webcam's own JPEG frames and the dashboard streams them untouched (MJPEG). Five times a second, an
+OpenCV monitor compares a small copy of the newest frame with a slowly adapting background, and watches the
+zones drawn on it (water on a floor, a status light, motion). A microphone thread analyses the webcam's sound
+for its level and for smoke and CO alarm beep patterns. Both go out through the same LiveHub, as `camera` and
+`sound` events. With recordings on, a recorder thread encodes a short H.264 clip of each motion event to local
+disk, kept for 30 days; otherwise no frame or sound is ever written to disk.
+
+**Retention** keeps the file bounded. Every hour, raw readings older than `retention_days` (30) and hourly rows
+older than `hourly_retention_days` (730) are deleted, and the freed pages go back to the disk (SQLite's
+incremental vacuum), so lowering a retention shrinks the file too. At one reading every 2 s, a board levels off
+at about 265 MB: 262 MB of raw readings (202 bytes each, measured with 1.3 million) and 2.9 MB of hourly rows.
+The Pipeline page and `make lite-status` show the pace, the policy and that ceiling. The history API asks the raw
+table for buckets shorter than an hour and the hourly table for the rest, so a 30-day chart is a scan of 720
+rows, not 1.3 million, and the 1-year chart is 365 daily points built from the hourly rows. The platform's web
+app applies the same two retentions to PostgreSQL.
 
 ## Platform: a streaming pipeline
 

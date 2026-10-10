@@ -2,7 +2,8 @@
 
 **Temperature, humidity and pressure from Raspberry Pi Pico W boards, from the breadboard to the dashboard.**
 
-A Pico W reads a BME280 sensor and streams one JSON line per reading over Wi-Fi (or USB).
+A Pico W reads a BME280 sensor and streams one JSON line per reading: over USB when it is plugged into the
+machine running IoT Center (Wi-Fi off), over Wi-Fi when it is not.
 IoT Center receives, validates, stores and charts those readings, live and historically.
 It comes in two editions that share the same firmware, the same message contract and the same dashboard:
 
@@ -12,6 +13,7 @@ It comes in two editions that share the same firmware, the same message contract
 | Ingestion | TCP and USB serial | gateway: TCP (and USB) into Kafka, with a dead-letter topic |
 | History | SQLite: raw readings + hourly aggregates | PostgreSQL written by Spark: raw readings + hourly aggregates |
 | Analytics | dashboard history (1 h to 30 days), CSV export | the same, plus a Streamlit app: patterns, data quality, explorer |
+| Camera | optional USB webcam: live view at full quality, motion, zones (water on a floor, a status light), motion clips kept 30 days, and with its microphone, smoke/CO alarm detection ([camera](docs/camera.md)) | not yet |
 | Footprint | about 100 MB of RAM | about 3.5 GB of RAM (fits a Raspberry Pi 4 with 8 GB) |
 | Start with | `iotcenter lite` | `docker compose up -d` |
 | Good for | one or a few boards, a laptop, a Pi Zero 2, USB-only setups | learning and showing off a real streaming data platform |
@@ -60,15 +62,16 @@ iotcenter lite                                   # dashboard: http://localhost:8
 python simulator/simulate_picow.py --devices 3   # in a second terminal: three fake boards
 ```
 
-Add `--backfill 7d` to the simulator to fill a week of history first. Prefer Docker? Run
-`docker compose up -d --build` in [`lite/`](lite/README.md).
+Add `--backfill 7d` to the simulator to fill a week of history first. Prefer Docker? `make lite-docker`
+builds and starts it in one container, then prints the links and the health of each part ([`lite/`](lite/README.md)).
 
 ### The full platform
 
 ```bash
 cd platform
 cp .env.example .env            # optional: ports, time zone, Spark size
-docker compose up -d --build    # first build takes a few minutes
+docker compose up -d --build    # first build takes a few minutes (or `make platform-up` from the root,
+                                # which also prints the links and each service's health when it is ready)
 python ../simulator/simulate_picow.py --devices 3 --backfill 1d
 ```
 
@@ -83,9 +86,10 @@ See [`platform/README.md`](platform/README.md) for the services, ports and day-t
 
 ### With a real Pico W
 
-Wire a BME280 (and optionally an SSD1306 OLED) to the Pico W, flash MicroPython, copy
-[`firmware/`](firmware/README.md) to the board and set your Wi-Fi and server in `config.py`.
-The same firmware works with both editions, over Wi-Fi or plain USB.
+Wire a BME280 (and optionally an SSD1306 OLED) to the Pico W, flash MicroPython, set your Wi-Fi and server in
+`firmware/config.py` and upload [`firmware/`](firmware/README.md) with `make firmware`. Plug the board into the
+machine running IoT Center and `make lite-docker-usb`: the board streams over USB with its Wi-Fi off, and falls
+back to Wi-Fi by itself whenever that machine stops reading it. The same firmware works with both editions.
 
 ## Screenshots
 
@@ -101,13 +105,19 @@ The same firmware works with both editions, over Wi-Fi or plain USB.
 ## Project layout
 
 ```
-firmware/        MicroPython for the Pico W: read the BME280, stream NDJSON, buffer when offline
+firmware/        MicroPython for the Pico W: read the BME280, stream NDJSON over USB (Wi-Fi as the fallback)
 simulator/       simulate_picow.py: realistic fake boards over TCP, USB (pty), Kafka or stdout
 src/iotcenter/   the Python package, one module per job:
   protocol.py      the message contract (pydantic): parse, validate, upgrade 2023 v1 payloads
   ingest.py        TCP server + USB serial reader, shared by Lite and the gateway
   hub.py           live fan-out to open dashboards (Server-Sent Events)
   api.py           the dashboard's HTTP API; each edition plugs in a data source
+  camera.py        Lite: a USB webcam streamed live, untouched (MJPEG), and its API
+  vision.py        Lite: what the camera notices, with OpenCV: motion, light switched on or off
+  zones.py         Lite: zones on the picture: water on a floor, a status light or flame, motion
+  microphone.py    Lite: the webcam's microphone, analysed live and streamed to Listen
+  sound.py         Lite: sound level, loud noises, smoke/CO alarm beep patterns, low-battery chirps
+  recorder.py      Lite: a short H.264 clip of each motion event, kept for a while on local disk
   lite/            Lite edition: SQLite storage + app
   gateway.py       Platform: devices -> Kafka (+ dead-letter topic)
   web/             Platform: dashboard backed by Kafka (live) and PostgreSQL (history)
@@ -125,6 +135,7 @@ docs/            guides: architecture, protocol, hardware, configuration, operat
 - [Message contract](docs/protocol.md): every field, the framing, the Kafka topics and the API format
 - [Hardware](docs/hardware.md): parts, wiring, and what the LEDs, buttons and display show
 - [Firmware](firmware/README.md): flash, configure and upload, over Wi-Fi or USB
+- [Camera and microphone](docs/camera.md): a USB webcam on the Lite host: live view, motion, zones, alarms, privacy
 - [Configuration](docs/configuration.md): every `IOT_*` setting and Compose variable
 - [Operations](docs/operations.md): day-to-day commands, backfills, Kafka and SQL recipes, troubleshooting
 - [Raspberry Pi host](docs/raspberry-pi.md): setting up a Pi 4 to run the platform

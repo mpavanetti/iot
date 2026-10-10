@@ -12,7 +12,9 @@ commands run in `platform/` (or add `-f platform/compose.yaml`).
 | Follow the logs | `make platform-logs`, or `docker compose logs -f gateway web spark-streaming` |
 | Delete all platform data | `make platform-reset` (removes the Kafka, PostgreSQL and checkpoint volumes) |
 | Open Kafka UI | `make tools`, then http://localhost:8090 |
-| Run Lite | `make lite` (local) or `make lite-docker` |
+| Run Lite | `make lite` (local), `make lite-docker`, `make lite-docker-usb` (with a board on USB) or `make lite-docker-camera` (and a USB webcam) |
+| Links, health and boards | `make lite-status` / `make platform-status`, or `iotcenter status http://host:port` |
+| Upload the firmware | `make firmware` (pauses Lite in Docker while it uses the USB port) |
 | Simulate boards | `make simulate` (three boards, live) |
 | Load a week of history | `make backfill`, then `make rebuild-hourly` on the platform (see below) |
 
@@ -107,7 +109,9 @@ DELETE FROM readings WHERE event_time < now() - interval '180 days';
 - The database is one file: `data/iot-lite.db` locally, or the `lite-data` volume in Docker. Back it up while
   Lite runs with `sqlite3 data/iot-lite.db ".backup backup.db"`.
 - Explore it: `sqlite3 data/iot-lite.db "SELECT device_id, datetime(last_seen, 'unixepoch'), messages, dropped FROM devices"`.
-- Raw readings older than `IOT_RETENTION_DAYS` are deleted hourly; `readings_hourly` is kept.
+- Hourly, raw readings older than `IOT_RETENTION_DAYS` (30) and hourly aggregates older than
+  `IOT_HOURLY_RETENTION_DAYS` (730) are deleted, and the space goes back to the disk. `make lite-status` shows
+  how fast the file grows and where it levels off.
 
 ## Troubleshooting
 
@@ -122,4 +126,5 @@ DELETE FROM readings WHERE event_time < now() - interval '180 days';
 | Kafka clients on another machine cannot connect | Set `KAFKA_EXTERNAL_HOST` to this host's name or IP and restart Kafka |
 | `kafka-init` exits with an error | `docker compose logs kafka-init`; Kafka must be healthy first (`docker compose ps kafka`) |
 | Port already in use | Change it in `platform/.env` (or `lite` variables), e.g. `WEB_PORT=8080` |
+| The Camera tab says "Camera unavailable" (or the microphone is) | Unplugged, wrong `CAMERA_DEVICE` / `MICROPHONE_DEVICE`, or another program has the webcam: see [camera troubleshooting](camera.md#troubleshooting) |
 | Serial port permission denied (Linux) | `sudo usermod -aG dialout $USER` and log in again; in Docker the image's user is already in `dialout` |

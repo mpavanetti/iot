@@ -15,7 +15,7 @@ Ethernet. A 64-bit OS is required: the Kafka and Spark images are `arm64`.
 ```bash
 ssh pi@raspberrypi.local
 sudo apt update && sudo apt full-upgrade -y
-sudo timedatectl set-timezone America/Edmonton     # your time zone
+sudo timedatectl set-timezone America/New_York     # your time zone
 ```
 
 Use a good SD card (A2) or, better, boot from a USB SSD: Kafka and PostgreSQL write continuously.
@@ -38,7 +38,7 @@ git clone https://github.com/mpavanetti/iot.git && cd iot
 
 ```bash
 cd platform && cp .env.example .env
-# optional: WEB_PORT=80, TIMEZONE=America/Edmonton, KAFKA_EXTERNAL_HOST=raspberrypi.local
+# optional: WEB_PORT=80, TIMEZONE=America/New_York, KAFKA_EXTERNAL_HOST=raspberrypi.local
 docker compose up -d --build
 ```
 
