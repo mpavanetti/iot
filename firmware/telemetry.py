@@ -2,9 +2,16 @@
 # No hardware imports here, so the same file runs (and is unit-tested) on CPython.
 
 import json
+import math
 
 PROTOCOL_VERSION = 2
-FIRMWARE_VERSION = "2.0.0"
+FIRMWARE_VERSION = "2.1.0"
+
+# A computer running IoT Center that reads the board's USB port writes a "host line" every few
+# seconds: "#iot " and a JSON object with the Unix time in `now`. It means "USB is being read"
+# (so the board keeps Wi-Fi off) and sets the clock (no NTP without Wi-Fi). At the REPL it is a
+# comment, so it is harmless there.
+HOST_LINE_PREFIX = "#iot "
 
 
 def iso8601(tm):
@@ -15,6 +22,18 @@ def iso8601(tm):
 def clock_is_set(tm):
     # The Pico's real-time clock starts in 2021 at power-on; NTP moves it to the present.
     return tm[0] >= 2024
+
+
+def parse_host_line(line):
+    """A line received over USB -> the host's message (a dict), or None if it is not one."""
+    line = line.strip()
+    if not line.startswith(HOST_LINE_PREFIX):
+        return None
+    try:
+        message = json.loads(line[len(HOST_LINE_PREFIX) :])
+    except ValueError:
+        return None
+    return message if isinstance(message, dict) else None
 
 
 def build_message(device_id, name, seq, ts, env, board):
@@ -45,10 +64,51 @@ def build_message(device_id, name, seq, ts, env, board):
         "uptime_s",
         "wifi_rssi_dbm",
         "ip",
+        "cpu_busy_pct",
+        "loop_max_ms",
+        "sensor_errors",
+        "boot_reason",
     ):
         if board.get(key) is not None:
             message[key] = board[key]
     return message
+
+
+def dew_point(temperature_c, humidity_pct):
+    """Dew point via the Magnus formula, the same as the server's (protocol.dew_point)."""
+    a, b = 17.62, 243.12
+    rh = min(max(humidity_pct, 0.1), 100.0)  # ln(0) is undefined
+    gamma = math.log(rh / 100.0) + a * temperature_c / (b + temperature_c)
+    return b * gamma / (a - gamma)
+
+
+def comfort(humidity_pct):
+    """Indoor humidity in a word: under 30 % is dry (a cold winter), over 60 % humid."""
+    if humidity_pct < 30:
+        return "dry"
+    if humidity_pct > 60:
+        return "humid"
+    return "ok"
+
+
+def duration(seconds):
+    """A short uptime for the display: '45s', '12m', '3h05m', '2d03h'."""
+    if seconds < 60:
+        return "%ds" % seconds
+    minutes = seconds // 60
+    if minutes < 60:
+        return "%dm" % minutes
+    hours = minutes // 60
+    if hours < 24:
+        return "%dh%02dm" % (hours, minutes % 60)
+    return "%dd%02dh" % (hours // 24, hours % 24)
+
+
+def bar(left, right, width=16):
+    """`left` and `right` on one display line, `right` flush right."""
+    if not right:
+        return left
+    return left + " " * max(1, width - len(left) - len(right)) + right
 
 
 def encode(message):

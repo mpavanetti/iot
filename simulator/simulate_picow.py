@@ -36,7 +36,7 @@ from collections import deque
 from datetime import UTC, datetime
 from urllib.parse import urlparse
 
-FIRMWARE = "2.0.0-sim"
+FIRMWARE = "2.1.0-sim"
 
 log = functools.partial(print, file=sys.stderr, flush=True)
 
@@ -125,6 +125,10 @@ class SimulatedPico:
             "wifi_rssi_dbm": int(min(self.rssi + rng.gauss(0, 2), -30)),
             "ip": f"192.168.1.{100 + self.index}",
             "firmware": FIRMWARE,
+            "cpu_busy_pct": round(min(max(rng.gauss(4.5, 0.8), 1.0), 100.0), 1),
+            "loop_max_ms": int(min(max(rng.gauss(55, 12), 20), 900)),
+            "sensor_errors": 0,
+            "boot_reason": "power on",
         }
         self.seq += 1
         return message
@@ -421,7 +425,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--pressure",
         type=float,
         default=1013.25,
-        help="mean pressure in hPa (sea level 1013; at Calgary's altitude ~888)",
+        help="mean pressure in hPa (sea level 1013; at 1,045 m ~888)",
     )
     add("--invalid-rate", type=float, default=0.0, help="share of broken messages (default 0)")
     add("--legacy", action="store_true", help="speak the 2023 v1 protocol")

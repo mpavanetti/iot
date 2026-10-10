@@ -27,8 +27,8 @@ The BME280 and the display share one I2C bus. Every pin can be changed in `confi
 | BME280 GND, SSD1306 GND | GND | 38 | |
 | BME280 SDA, SSD1306 SDA | GP0 (I2C0 SDA) | 1 | `I2C_SDA = 0` |
 | BME280 SCL, SSD1306 SCL | GP1 (I2C0 SCL) | 2 | `I2C_SCL = 1` |
-| Button 1 (start), other leg to GND | GP7 | 10 | `BUTTON_START = 7` |
-| Button 2 (pause), other leg to GND | GP8 | 11 | `BUTTON_STOP = 8` |
+| Button 1 (pause / resume), other leg to GND | GP7 | 10 | `BUTTON_PAUSE = 7` |
+| Button 2 (display page), other leg to GND | GP8 | 11 | `BUTTON_PAGE = 8` |
 | LED "connected" (+ resistor to GND) | GP2 | 4 | `LED_CONNECTED = 2` |
 | LED "sending" | GP3 | 5 | `LED_SENDING = 3` |
 | LED "problem" | GP15 | 20 | `LED_PROBLEM = 15` |
@@ -41,31 +41,51 @@ The BME280's address is 0x76 on most breakouts; if yours uses 0x77, set `BME280_
 | Signal | Meaning |
 |---|---|
 | Onboard LED | toggles on every delivery |
-| LED "connected" (GP2) | on while connected to the server |
+| LED "connected" (GP2) | on while a USB host is heard, or while connected to the server over Wi-Fi |
 | LED "sending" (GP3) | flashes on every delivery |
-| LED "problem" (GP15) | on while Wi-Fi or the server is unreachable |
-| Button 1 / Button 2 | resume / pause streaming (the board keeps reading the sensor either way) |
+| LED "problem" (GP15) | on while on Wi-Fi and the server is unreachable |
+| Button 1 | pause / resume streaming. Streaming starts by itself at boot; while paused the board keeps reading the sensor and the display stays live |
+| Button 2 | switch the display between the readings and the details page |
 
-The display (16 characters by 8 lines):
+The display has an inverted title bar that always says which link the readings take, then one of two pages
+(button 2 switches). The readings page:
 
 ```
-21.6C  45%RH          temperature and humidity
-1013.2 hPa            pressure
-                      (spacer)
-192.168.1.74          the board's IP, "no Wi-Fi" or "USB only"
-srv: connected        connected · retry in 4s · reconnecting · Wi-Fi...
-sent 1234             readings delivered since boot
-waiting 0             readings buffered while offline
-STREAMING             or PAUSED
+USB    connected      title: the link and its state (see below)
+     21.1C            temperature, double size
+47%RH   899.2hPa      humidity and (station) pressure
+dew 9.3C      ok      dew point and indoor comfort: dry (< 30 %), ok, humid (> 60 %)
+sent 1234 wait 0      readings delivered since boot, and waiting to be sent; "PAUSED: press 1" when paused
 ```
+
+The details page:
+
+```
+USB    connected
+over USB              or the board's IP on Wi-Fi
+Wi-Fi radio off       or "to <SERVER_HOST>"
+17:46:12 UTC          the board's clock, or "clock not set"
+up 3h05m              time since boot
+v2.1.0  watchdog      firmware, and why it last started: "power on", or "watchdog" (also after a crash or reset)
+```
+
+| Title bar | Meaning |
+|---|---|
+| `USB    connected` | IoT Center is reading the USB port: readings go over USB, Wi-Fi is off |
+| `USB?   listening` | the first 8 s after boot: waiting to hear from a USB host before trying Wi-Fi |
+| `Wi-Fi    -61 dBm` | sending over Wi-Fi to the server (signal strength) |
+| `Wi-Fi    joining` / `retry 4s` / `reconnecting` | on Wi-Fi, but not (yet) connected to the server |
+| `USB      no host` | `WIFI_ENABLED = False` and nothing has been heard on USB yet |
 
 ## Readings you can expect
 
 - **Board temperature** (`cpu_temp_c`) reads several degrees above the air: the RP2040 warms itself. The BME280
   also warms slightly if it sits right next to the Pico W, so give it a few centimetres of wire for room-accurate
   readings.
-- **Pressure** is station pressure, so it depends on altitude: about 1013 hPa at sea level, about 888 hPa in
-  Calgary (1,045 m). Weather moves it by about ±15 hPa.
+- **Pressure** is station pressure, so it depends on altitude: about 1013 hPa at sea level, about 888 hPa at
+  1,045 m. Weather moves it by about ±15 hPa. Set `ALTITUDE_M` (or `IOT_ALTITUDE_M`) and the
+  dashboard also shows sea-level pressure, the figure weather reports quote. After 3 hours of data it also shows
+  the pressure tendency (rising, steady, falling) with the barometer's rule-of-thumb outlook.
 - **Dew point** is computed from temperature and humidity; it is what to watch for condensation (a garage or
   basement surface colder than the dew point gets wet).
 
@@ -76,6 +96,8 @@ STREAMING             or PAUSED
 | `OSError: [Errno 5] EIO` or `ENODEV` at start | sensor not found: check SDA/SCL (not swapped), 3V3 and GND, or set `BME280_ADDRESS = 0x77`. In the REPL, `machine.I2C(0, sda=machine.Pin(0), scl=machine.Pin(1)).scan()` should list `0x76` (118) and `0x3c` (60) |
 | Humidity is always missing or 0 | it is a BMP280, which has no humidity sensor |
 | `no OLED display found` in the log | the display is not at 0x3C or not wired; the firmware carries on without it |
-| Stuck on `Wi-Fi...` | wrong SSID or password; the Pico W only supports 2.4 GHz networks; check `WIFI_COUNTRY` |
-| `srv: retry in ...` | the server is not reachable: check `SERVER_HOST`/`SERVER_PORT`, that IoT Center is running, and the host firewall (`sudo ufw allow 1500/tcp`) |
-| The board reboots every few seconds | the watchdog: the program stopped (an error, or you pressed Stop in Thonny). Read the log over USB; set `WATCHDOG = False` while developing |
+| Plugged into the IoT Center machine, but the title says `Wi-Fi` | IoT Center is not reading that port: check `iotcenter ports`, `--serial` / `IOT_SERIAL_PORT`, and (Docker) the USB overlay. The dashboard's Pipeline page shows the USB reader's state |
+| Stuck on `Wi-Fi    joining` | wrong SSID or password; the Pico W only supports 2.4 GHz networks; check `WIFI_COUNTRY` |
+| `Wi-Fi    retry ...` | the server is not reachable: check `SERVER_HOST`/`SERVER_PORT`, that IoT Center is running, and the host firewall (`sudo ufw allow 1500/tcp`) |
+| `sensor error` on the display | the BME280 stopped answering (a loose wire): the board keeps trying every reading |
+| The board reboots every few seconds | the watchdog or a crash: read the log over USB (`mpremote`); `WATCHDOG = False` rules out the watchdog |

@@ -35,7 +35,7 @@ python simulator/simulate_picow.py --target stdout --count 3         # just prin
 | `--backfill` | | history to send first, e.g. `24h`, `7d` |
 | `--backfill-step` | 60s | spacing of the backfilled readings |
 | `--backfill-only` | | exit after the backfill |
-| `--pressure` | 1013.25 | mean pressure in hPa: 1013 at sea level, about 888 at Calgary's altitude |
+| `--pressure` | 1013.25 | mean pressure in hPa: 1013 at sea level, about 888 at 1,045 m |
 | `--invalid-rate` | 0 | share of deliberately broken messages |
 | `--legacy` | | send v1 payloads, one connection per message |
 | `--seed` | | make the data reproducible |
